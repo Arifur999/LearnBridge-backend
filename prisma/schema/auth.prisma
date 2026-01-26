@@ -1,0 +1,28 @@
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+
+  role      Role     @default(STUDENT)
+  status    Status   @default(ACTIVE)
+
+  trainerProfile TrainerProfile?
+  courses        Course[]        @relation("TrainerCourses")
+  enrollments    Enrollment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  TRAINER
+  STUDENT
+}
+
+enum Status {
+  ACTIVE
+  PENDING
+  BLOCKED
+}

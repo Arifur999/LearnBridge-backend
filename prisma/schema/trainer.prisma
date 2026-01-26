@@ -1,0 +1,12 @@
+model TrainerProfile {
+  id         String  @id @default(uuid())
+  userId     String  @unique
+  bio        String?
+  skills     String?
+  experience Int?
+  isApproved Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}

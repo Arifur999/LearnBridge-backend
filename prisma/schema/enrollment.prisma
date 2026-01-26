@@ -1,0 +1,12 @@
+model Enrollment {
+  id        String @id @default(uuid())
+  studentId String
+  courseId  String
+
+  student User   @relation(fields: [studentId], references: [id])
+  course  Course @relation(fields: [courseId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, courseId])
+}

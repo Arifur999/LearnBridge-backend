@@ -1,0 +1,22 @@
+model Course {
+  id          String       @id @default(uuid())
+  title       String
+  description String
+  category    String
+  price       Float        @default(0)
+  status      CourseStatus @default(PENDING)
+
+  trainerId String
+  trainer   User @relation("TrainerCourses", fields: [trainerId], references: [id])
+
+  enrollments Enrollment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CourseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
