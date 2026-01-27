@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "npx tsx watch src/server.ts",
-    "seed:admin": "npx tsx src/scripts/seedAdmin.ts"
+     "dev": "npx tsx watch src/server.ts",
+  "seed": "npx tsx src/scripts/seed.ts"
   },
   "keywords": [],
   "author": "",
