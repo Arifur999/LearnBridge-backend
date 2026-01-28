@@ -3,6 +3,8 @@ import { enrollCourse } from "./enrollment.service";
 import { AuthRequest } from "../../middlewares/verifyToken";
 
 
+
+
 export const enrollCourseController = async (
   req: AuthRequest ,
   res: Response
@@ -11,7 +13,7 @@ export const enrollCourseController = async (
     const studentId = req.user!.userId;
     const { courseId } = req.params;
 
-    const enrollment = await enrollCourse(studentId, courseId);
+    const enrollment = await enrollCourse(studentId, courseId as string);
 
     res.status(201).json({
       success: true,
