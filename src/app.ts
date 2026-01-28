@@ -8,6 +8,8 @@ import studentCourseRoutes from './module/student//student.course.route'
 import enrollmentRoutes from './module/enrollment/enrollment.route'
 import studentEnrollmentRoutes from './module/studentEnrollment/student.enrollment.route'
 import adminDashboardRoutes from './module/adminDashboard/admin.dashboard.route'
+import trainerDashboardRoutes from './module/trainerDashboard/trainer.dashboard.route';
+
 
 const app = express();
 app.use(cors());
@@ -22,6 +24,7 @@ app.use("/api/v1/student", studentCourseRoutes);
 app.use("/api/v1/student", enrollmentRoutes);
 app.use("/api/v1/student", studentEnrollmentRoutes);
 app.use("/api/v1/admin", adminDashboardRoutes);
+app.use("/api/v1/trainer", trainerDashboardRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello, World!');
