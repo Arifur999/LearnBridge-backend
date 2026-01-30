@@ -29,3 +29,13 @@ export const createCourse = async (payload: CreateCoursePayload) => {
 
   return course;
 };
+
+export const getCourseById = async (id: string) => {
+  const course = await prisma.course.findUnique({
+    where: {
+      id, 
+    },
+  });
+
+  return course;
+};
