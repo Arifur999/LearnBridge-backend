@@ -67,6 +67,7 @@ export const getSingleCourseController = async (
       success: true,
       message: "Course retrieved successfully",
       data: course,
+     
     });
   } catch (error) {
     res.status(500).json({
@@ -75,3 +76,4 @@ export const getSingleCourseController = async (
     });
   }
 };
+
