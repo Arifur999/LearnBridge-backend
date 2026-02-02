@@ -11,6 +11,11 @@ import adminDashboardRoutes from './module/adminDashboard/admin.dashboard.route'
 import trainerDashboardRoutes from './module/trainerDashboard/trainer.dashboard.route';
 import courseSearchRoutes from './module/search/course.search.route';
 
+
+import bookingRoutes from './module/booking/booking.route';
+import reviewRoutes from './module/review/review.route';
+import categoryRoutes from './module/category/category.route';
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -26,6 +31,13 @@ app.use("/api/v1/student", studentEnrollmentRoutes);
 app.use("/api/v1/admin", adminDashboardRoutes);
 app.use("/api/v1/trainer", trainerDashboardRoutes);
 app.use("/api/v1", courseSearchRoutes);
+
+
+
+// ---------------------
+app.use("/api/v1", bookingRoutes); 
+app.use("/api/v1/reviews", reviewRoutes);
+app.use("/api/v1/categories", categoryRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello, World!');
