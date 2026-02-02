@@ -1,0 +1,30 @@
+model Booking {
+  id        String        @id @default(uuid())
+  studentId String
+  slotId    String        @unique
+  status    BookingStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  student User @relation(fields: [studentId], references: [id])
+  slot    Slot @relation(fields: [slotId], references: [id])
+}
+
+model Slot {
+  id        String   @id @default(uuid())
+  trainerId String
+  date      String // Format: "2024-02-10"
+  startTime String // Format: "10:00 AM"
+  endTime   String // Format: "11:00 AM"
+  isBooked  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  trainer User     @relation(fields: [trainerId], references: [id])
+  booking Booking?
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}

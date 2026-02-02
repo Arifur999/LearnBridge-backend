@@ -7,9 +7,10 @@ model Course {
   status      CourseStatus @default(PENDING)
 
   trainerId String
-  trainer   User @relation("TrainerCourses", fields: [trainerId], references: [id])
+  trainer   User   @relation("TrainerCourses", fields: [trainerId], references: [id])
 
   enrollments Enrollment[]
+  reviews     Review[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

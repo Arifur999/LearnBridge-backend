@@ -9,7 +9,11 @@ export interface AuthRequest extends Request {
     role: string;
     status: string;
   };
+    params: {
+    [key: string]: string;
+  };
 }
+
 
 export const verifyToken = (
   req: AuthRequest,

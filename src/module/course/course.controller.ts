@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middlewares/verifyToken";
 import { createCourse, getCourseById } from "./course.service";
+import { Request } from "express-serve-static-core";
 
 
 export const createCourseController = async (
@@ -35,21 +36,25 @@ export const createCourseController = async (
   }
 };
 
+
+
+
 export const getSingleCourseController = async (
-  req: AuthRequest,
+  req: Request, 
   res: Response
 ) => {
   try {
     const { id } = req.params;
+    const courseId = Array.isArray(id) ? id[0] : id;
 
-    if (!id || typeof id !== "string") {
+    if (!courseId) {
       return res.status(400).json({
         success: false,
-        message: "Invalid course ID",
+        message: "Course ID is required",
       });
     }
 
-    const course = await getCourseById(id);
+    const course = await getCourseById(courseId);
 
     if (!course) {
       return res.status(404).json({
@@ -60,6 +65,7 @@ export const getSingleCourseController = async (
 
     res.status(200).json({
       success: true,
+      message: "Course retrieved successfully",
       data: course,
     });
   } catch (error) {
