@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { loginUser, registerUser } from "./auth.service";
+import { loginUser, registerUser, getCurrentUser } from "./auth.service";
 
 
 export const register = async (req: Request, res: Response) => {
@@ -63,6 +63,31 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getMe = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const user = await getCurrentUser(userId);
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: "Internal server error",
