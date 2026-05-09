@@ -1,51 +1,103 @@
 import { Request, Response } from "express";
-import { getAllTutors, getTutorById } from "./tutor.service";
+import { AuthRequest } from "../../middlewares/verifyToken";
+import {
+  getAllTutors,
+  getTutorById,
+  getTutorProfileFromDB,
+  updateTutorProfileIntoDB,
+} from "./tutor.service";
+import { BookingService } from "../booking/booking.service";
 
+// Public: list all approved tutors with filters
 export const getTutors = async (req: Request, res: Response) => {
   try {
-    const { search, category, minPrice, maxPrice, page, limit } = req.query;
+    const { search, subject, minRate, maxRate, page, limit } = req.query;
 
     const result = await getAllTutors({
       search: search as string,
-      category: category as string,
-      minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
-      maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
+      subject: subject as string,
+      minRate: minRate ? parseFloat(minRate as string) : undefined,
+      maxRate: maxRate ? parseFloat(maxRate as string) : undefined,
       page: page ? parseInt(page as string) : 1,
       limit: limit ? parseInt(limit as string) : 10,
     });
 
-    res.status(200).json({
-      success: true,
-      data: result,
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
+// Public: get single tutor details with reviews and available slots
 export const getTutorByIdController = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const tutor = await getTutorById(id);
-
-    res.status(200).json({
-      success: true,
-      data: tutor,
-    });
+    const tutor = await getTutorById(req.params.id);
+    res.status(200).json({ success: true, data: tutor });
   } catch (error: any) {
     if (error.message === "TUTOR_NOT_FOUND") {
-      return res.status(404).json({
-        success: false,
-        message: "Tutor not found",
-      });
+      return res.status(404).json({ success: false, message: "Tutor not found" });
     }
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
 
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
+// Public: get available slots for a specific tutor
+export const getPublicTutorSlotsController = async (req: Request, res: Response) => {
+  try {
+    const slots = await BookingService.getPublicTutorSlotsFromDB(req.params.id);
+    res.status(200).json({ success: true, data: slots });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Tutor: get own profile
+export const getTutorProfileController = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await getTutorProfileFromDB(req.user!.userId);
+    res.status(200).json({ success: true, data: result });
+  } catch (error: any) {
+    if (error.message === "TUTOR_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: "Profile not found" });
+    }
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Tutor: update own profile
+export const updateTutorProfileController = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await updateTutorProfileIntoDB(req.user!.userId, req.body);
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: result,
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Tutor: get own availability slots
+export const getTutorOwnSlotsController = async (req: AuthRequest, res: Response) => {
+  try {
+    const slots = await BookingService.getTutorSlotsFromDB(req.user!.userId);
+    res.status(200).json({ success: true, data: slots });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Tutor: get own sessions/bookings
+export const getTutorSessionsController = async (req: AuthRequest, res: Response) => {
+  try {
+    const { status } = req.query;
+    const result = await BookingService.getTutorBookingsFromDB(
+      req.user!.userId,
+      status as string
+    );
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

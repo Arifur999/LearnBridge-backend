@@ -7,13 +7,13 @@ model User {
   role   Role   @default(STUDENT)
   status Status @default(ACTIVE)
 
-  trainerProfile TrainerProfile?
-  courses        Course[]        @relation("TrainerCourses")
-  enrollments    Enrollment[]
-
-  bookings Booking[]
-  reviews  Review[]
-  slots    Slot[]
+  trainerProfile  TrainerProfile?
+  courses         Course[]        @relation("TrainerCourses")
+  enrollments     Enrollment[]
+  bookings        Booking[]
+  reviews         Review[]        @relation("StudentReviews")
+  receivedReviews Review[]        @relation("TutorReviews")
+  slots           Slot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

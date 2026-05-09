@@ -10,8 +10,8 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "target": "ES2023",
-    "types": [],
-    "ignoreDeprecations": "6.0",
+    "types": ["node"],
+    "ignoreDeprecations": "5.0",
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
@@ -44,6 +44,6 @@
     "skipLibCheck": true,
      "esModuleInterop": true,
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "prisma.config.ts"],
   "exclude": ["node_modules", "dist","generated/prisma"],
 }
