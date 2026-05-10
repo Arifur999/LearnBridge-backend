@@ -2,32 +2,39 @@ import "dotenv/config";
 import bcrypt from "bcrypt";
 import { prisma } from "../lib/prisma";
 
-console.log("🚀 Seed started");
-
 async function seedAdmin() {
-  const email = "arr96777777@gmail.com";
-
-  const exists = await prisma.user.findUnique({
-    where: { email },
-  });
-
-  if (exists) {
-    console.log("⚠️ Admin already exists");
-    return;
-  }
-
-  const hashedPassword = await bcrypt.hash("SecureP@ssw0rd!", 10);
-
-  await prisma.user.create({
-    data: {
-      name: "Arif777",
-      email,
-      password: hashedPassword,
-      role: "ADMIN",
+  const admins = [
+    {
+      name: "Super Admin",
+      email: "admin@skillbridge.com",
+      password: "Admin@123",
     },
-  });
+  ];
 
-  console.log("✅ Admin created");
+  for (const admin of admins) {
+    const exists = await prisma.user.findUnique({
+      where: { email: admin.email },
+    });
+
+    if (exists) {
+      console.log(`⚠️  Admin already exists: ${admin.email}`);
+      continue;
+    }
+
+    const hashedPassword = await bcrypt.hash(admin.password, 10);
+
+    await prisma.user.create({
+      data: {
+        name: admin.name,
+        email: admin.email,
+        password: hashedPassword,
+        role: "ADMIN",
+        status: "ACTIVE",
+      },
+    });
+
+    console.log(`✅ Admin created: ${admin.email}`);
+  }
 }
 
 seedAdmin()
