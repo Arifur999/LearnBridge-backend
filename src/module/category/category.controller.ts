@@ -18,7 +18,7 @@ export const createCategoryController = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllCategoriesController = async (req: Request, res: Response) => {
+export const getAllCategoriesController = async (_req: Request, res: Response) => {
   try {
     const result = await getAllCategories();
     res.status(200).json({ success: true, data: result });
@@ -29,7 +29,7 @@ export const getAllCategoriesController = async (req: Request, res: Response) =>
 
 export const updateCategoryController = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params["id"]);
     const { name } = req.body;
     if (!name) {
       return res.status(400).json({ success: false, message: "Category name is required" });
@@ -50,7 +50,7 @@ export const updateCategoryController = async (req: Request, res: Response) => {
 
 export const deleteCategoryController = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params["id"]);
     await deleteCategory(id);
     res.status(200).json({ success: true, message: "Category deleted successfully" });
   } catch (error: any) {

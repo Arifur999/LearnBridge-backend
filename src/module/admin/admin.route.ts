@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { verifyToken } from "../../middlewares/verifyToken";
 import { verifyAdmin } from "../../middlewares/role";
-import { 
-  approveTrainerController, 
+import {
+  approveTrainerController,
   getPendingTrainersController,
   getAllUsersController,
   updateUserStatusController,
-  getAllBookingsController
+  getAllBookingsController,
 } from "./admin.controller";
+import { PaymentController } from "../payment/payment.controller";
 
 
 const router = Router();
@@ -50,6 +51,14 @@ router.patch(
   verifyToken,
   verifyAdmin,
   approveTrainerController
+);
+
+// Get all payments (admin only)
+router.get(
+  "/payments",
+  verifyToken,
+  verifyAdmin,
+  PaymentController.getAllPaymentsController
 );
 
 export default router;

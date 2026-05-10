@@ -31,7 +31,7 @@ const addReviewController = async (req: AuthRequest, res: Response) => {
 
 const getReviewsByTutorController = async (req: Request, res: Response) => {
   try {
-    const { tutorId } = req.params;
+    const tutorId = String(req.params["tutorId"]);
     const result = await ReviewService.getReviewsByTutor(tutorId);
 
     res.status(200).json({

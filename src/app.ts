@@ -16,10 +16,16 @@ import bookingRoutes from './module/booking/booking.route';
 import reviewRoutes from './module/review/review.route';
 import categoryRoutes from './module/category/category.route';
 import tutorRoutes from './module/tutor/tutor.route';
+import paymentRoutes from './module/payment/payment.route';
 
 const app: Application = express();
 
 app.use(cors());
+
+// ⚠️ Payment webhook MUST be registered before express.json()
+// Stripe sends a raw Buffer body that must not be parsed as JSON
+app.use("/api/v1/payments", paymentRoutes);
+
 app.use(express.json());
 
 // Auth
@@ -43,17 +49,16 @@ app.use("/api/v1/student", studentDashboardRoutes);
 // Public course search
 app.use("/api/v1", courseSearchRoutes);
 
-// Bookings & slots  (POST /bookings, GET /bookings, PATCH /bookings/:id, POST /slots)
+// Bookings & slots
 app.use("/api/v1", bookingRoutes);
 
 // Reviews
 app.use("/api/v1/reviews", reviewRoutes);
 
-// Categories (public GET + admin POST/PATCH/DELETE)
+// Categories
 app.use("/api/v1/categories", categoryRoutes);
 
 // Tutors — public listing + public slots + tutor self-management
-// NOTE: static sub-paths (/profile/me, /slots/mine) must be registered BEFORE /:id
 app.use("/api/v1/tutors", tutorRoutes);
 
 app.get('/', (_req: Request, res: Response) => {

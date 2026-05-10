@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { AuthRequest } from "../../middlewares/verifyToken";
 import { BookingService } from "./booking.service";
 
@@ -54,7 +54,7 @@ const getMyBookingsController = async (req: AuthRequest, res: Response) => {
 const getBookingByIdController = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.userId;
-    const { id } = req.params;
+    const id = req.params.id!;
     const result = await BookingService.getBookingByIdFromDB(id, userId);
 
     res.status(200).json({ success: true, data: result });
@@ -73,7 +73,7 @@ const updateBookingStatusController = async (req: AuthRequest, res: Response) =>
   try {
     const userId = req.user!.userId;
     const userRole = req.user!.role;
-    const { id } = req.params;
+    const id = req.params.id!;
     const { status } = req.body;
 
     if (!["COMPLETED", "CANCELLED"].includes(status)) {

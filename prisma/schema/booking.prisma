@@ -2,13 +2,15 @@ model Booking {
   id        String        @id @default(uuid())
   studentId String
   slotId    String        @unique
+  price     Float         @default(0)
   status    BookingStatus @default(CONFIRMED)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  student User    @relation(fields: [studentId], references: [id])
-  slot    Slot    @relation(fields: [slotId], references: [id])
+  student User     @relation(fields: [studentId], references: [id])
+  slot    Slot     @relation(fields: [slotId], references: [id])
   review  Review?
+  payment Payment?
 }
 
 model Slot {

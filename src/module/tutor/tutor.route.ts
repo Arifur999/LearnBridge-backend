@@ -13,17 +13,7 @@ import {
 
 const router = Router();
 
-// ── Public routes ────────────────────────────────────────────
-// GET /api/v1/tutors
-router.get("/", getTutors);
-
-// GET /api/v1/tutors/:id
-router.get("/:id", getTutorByIdController);
-
-// GET /api/v1/tutors/:id/slots  - available slots for booking
-router.get("/:id/slots", getPublicTutorSlotsController);
-
-// ── Tutor-only (authenticated) routes ────────────────────────
+// ── Tutor-only (authenticated) static routes — MUST come before /:id ────────
 // GET /api/v1/tutors/profile/me
 router.get("/profile/me", verifyToken, verifyTrainer, getTutorProfileController);
 
@@ -35,5 +25,15 @@ router.get("/slots/mine", verifyToken, verifyTrainer, getTutorOwnSlotsController
 
 // GET /api/v1/tutors/sessions/mine
 router.get("/sessions/mine", verifyToken, verifyTrainer, getTutorSessionsController);
+
+// ── Public routes (dynamic — registered AFTER static paths) ──────────────────
+// GET /api/v1/tutors
+router.get("/", getTutors);
+
+// GET /api/v1/tutors/:id/slots  - available slots for booking
+router.get("/:id/slots", getPublicTutorSlotsController);
+
+// GET /api/v1/tutors/:id
+router.get("/:id", getTutorByIdController);
 
 export default router;
