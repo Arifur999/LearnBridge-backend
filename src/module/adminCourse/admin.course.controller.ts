@@ -1,22 +1,28 @@
 import { Request, Response } from "express";
-import { getPendingCourses, updateCourseStatus } from "./admin.course.service";
+import { getPendingCourses, getAllCoursesForAdmin, updateCourseStatus } from "./admin.course.service";
 
 
 export const getPendingCoursesController = async (
-  req: Request,
+  _req: Request,
   res: Response
 ) => {
   try {
     const courses = await getPendingCourses();
-    res.status(200).json({
-      success: true,
-      data: courses,
-    });
+    res.status(200).json({ success: true, data: courses });
   } catch {
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const getAllCoursesController = async (
+  _req: Request,
+  res: Response
+) => {
+  try {
+    const courses = await getAllCoursesForAdmin();
+    res.status(200).json({ success: true, data: courses });
+  } catch {
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 

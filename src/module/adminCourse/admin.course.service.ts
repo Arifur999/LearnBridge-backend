@@ -4,19 +4,39 @@ import { prisma } from "../../lib/prisma";
 export const getPendingCourses = async () => {
   return prisma.course.findMany({
     where: { status: "PENDING" },
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       title: true,
+      description: true,
       category: true,
       price: true,
+      image: true,
+      status: true,
       createdAt: true,
       trainer: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
+        select: { id: true, name: true, email: true },
       },
+    },
+  });
+};
+
+export const getAllCoursesForAdmin = async () => {
+  return prisma.course.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      category: true,
+      price: true,
+      image: true,
+      status: true,
+      createdAt: true,
+      trainer: {
+        select: { id: true, name: true, email: true },
+      },
+      _count: { select: { enrollments: true } },
     },
   });
 };

@@ -6,6 +6,7 @@ model User {
 
   role   Role   @default(STUDENT)
   status Status @default(ACTIVE)
+  image  String?
 
   trainerProfile  TrainerProfile?
   courses         Course[]        @relation("TrainerCourses")

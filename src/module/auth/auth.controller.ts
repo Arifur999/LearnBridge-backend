@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { loginUser, registerUser, getCurrentUser } from "./auth.service";
+import { loginUser, registerUser, getCurrentUser, updateUserProfile } from "./auth.service";
+import { AuthRequest } from "../../middlewares/verifyToken";
 
 
 export const register = async (req: Request, res: Response) => {
@@ -67,6 +68,20 @@ export const login = async (req: Request, res: Response) => {
       success: false,
       message: "Internal server error",
     });
+  }
+};
+
+export const updateProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { name, image } = req.body as { name?: string; image?: string };
+    const user = await updateUserProfile(userId, {
+      ...(name ? { name } : {}),
+      ...(image !== undefined ? { image } : {}),
+    });
+    res.status(200).json({ success: true, data: user });
+  } catch {
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
