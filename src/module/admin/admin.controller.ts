@@ -1,15 +1,16 @@
 import { Request, Response } from "express";
-import { 
-  approveTrainerById, 
-  getPendingTrainers, 
-  getAllUsers, 
+import {
+  approveTrainerById,
+  getPendingTrainers,
+  getAllUsers,
   updateUserStatus,
-  getAllBookings 
+  updateUserRole,
+  getAllBookings,
 } from "./admin.service";
 
 
 export const getPendingTrainersController = async (
-  req: Request,
+  _req: Request,
   res: Response
 ) => {
   try {
@@ -129,6 +130,36 @@ export const updateUserStatusController = async (
       success: false,
       message: "Internal server error",
     });
+  }
+};
+
+export const updateUserRoleController = async (
+  req: Request<{ userId: string }>,
+  res: Response
+) => {
+  try {
+    const { userId } = req.params;
+    const { role } = req.body;
+
+    if (!role || !["STUDENT", "TRAINER"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role. Must be STUDENT or TRAINER",
+      });
+    }
+
+    const user = await updateUserRole(userId, role);
+
+    res.status(200).json({
+      success: true,
+      message: "User role updated successfully",
+      data: { id: user.id, name: user.name, email: user.email, role: user.role },
+    });
+  } catch (error: any) {
+    if (error.message === "USER_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 

@@ -6,6 +6,7 @@ import {
   getPendingTrainersController,
   getAllUsersController,
   updateUserStatusController,
+  updateUserRoleController,
   getAllBookingsController,
 } from "./admin.controller";
 import { PaymentController } from "../payment/payment.controller";
@@ -23,10 +24,18 @@ router.get(
 
 // Update user status - ban/unban (admin only)
 router.patch(
-  "/users/:userId",
+  "/users/:userId/status",
   verifyToken,
   verifyAdmin,
   updateUserStatusController
+);
+
+// Update user role (admin only)
+router.patch(
+  "/users/:userId/role",
+  verifyToken,
+  verifyAdmin,
+  updateUserRoleController
 );
 
 // Get all bookings (admin only)

@@ -17,6 +17,7 @@ import reviewRoutes from './module/review/review.route';
 import categoryRoutes from './module/category/category.route';
 import tutorRoutes from './module/tutor/tutor.route';
 import paymentRoutes from './module/payment/payment.route';
+import uploadRoutes from './module/upload/upload.route';
 
 const app: Application = express();
 
@@ -36,9 +37,9 @@ app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/admin", adminCourseRoutes);
 app.use("/api/v1/admin", adminDashboardRoutes);
 
-// Trainer (course management + dashboard)
-app.use("/api/v1/trainer", trainerRoutes);
+// Trainer (dashboard MUST come before trainer/:id dynamic route)
 app.use("/api/v1/trainer", trainerDashboardRoutes);
+app.use("/api/v1/trainer", trainerRoutes);
 
 // Student (course browsing + enrollments + dashboard)
 app.use("/api/v1/student", studentCourseRoutes);
@@ -60,6 +61,9 @@ app.use("/api/v1/categories", categoryRoutes);
 
 // Tutors — public listing + public slots + tutor self-management
 app.use("/api/v1/tutors", tutorRoutes);
+
+// File upload (Cloudinary)
+app.use("/api/v1/upload", uploadRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
   res.send('SkillBridge API is running');

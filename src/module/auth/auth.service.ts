@@ -9,7 +9,7 @@ export const registerUser = async (payload: {
   name: string;
   email: string;
   password: string;
-  role?: "STUDENT" | "TRAINER";
+  role?: string;
 }) => {
   const { name, email, password, role } = payload;
 
@@ -23,8 +23,11 @@ export const registerUser = async (payload: {
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const userRole = role === "TRAINER" ? "TRAINER" : "STUDENT";
-  const status = userRole === "TRAINER" ? "PENDING" : "ACTIVE";
+  // Accept "tutor" / "TUTOR" / "trainer" / "TRAINER" from the frontend
+  const normalizedRole = role?.toUpperCase();
+  const isTrainer = normalizedRole === "TRAINER" || normalizedRole === "TUTOR";
+  const userRole = isTrainer ? "TRAINER" : "STUDENT";
+  const status = isTrainer ? "PENDING" : "ACTIVE";
 
   const user = await prisma.user.create({
     data: {

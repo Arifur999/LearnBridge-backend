@@ -100,20 +100,24 @@ export const getAllUsers = async (filters: {
 
 // Update user status (ban/unban)
 export const updateUserStatus = async (userId: string, newStatus: "ACTIVE" | "BLOCKED") => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  });
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error("USER_NOT_FOUND");
 
-  if (!user) {
-    throw new Error("USER_NOT_FOUND");
-  }
-
-  const updated = await prisma.user.update({
+  return prisma.user.update({
     where: { id: userId },
     data: { status: newStatus },
   });
+};
 
-  return updated;
+// Update user role
+export const updateUserRole = async (userId: string, newRole: "STUDENT" | "TRAINER") => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error("USER_NOT_FOUND");
+
+  return prisma.user.update({
+    where: { id: userId },
+    data: { role: newRole },
+  });
 };
 
 // Get all bookings (admin view)

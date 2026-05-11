@@ -4,6 +4,7 @@ model Course {
   description String
   category    String
   price       Float        @default(0)
+  image       String?
   status      CourseStatus @default(PENDING)
 
   trainerId String
