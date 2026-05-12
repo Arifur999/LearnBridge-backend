@@ -1,5 +1,4 @@
 import { prisma } from "../../lib/prisma";
-import { BookingService } from "../booking/booking.service";
 
 export const getAllTutors = async (filters: {
   search?: string;
@@ -13,7 +12,7 @@ export const getAllTutors = async (filters: {
 
   const skip = (page - 1) * limit;
 
-  const profileWhere: any = { isApproved: true };
+  const profileWhere: any = {};
   if (subject) profileWhere.subjects = { contains: subject, mode: "insensitive" };
   if (minRate !== undefined) profileWhere.hourlyRate = { ...profileWhere.hourlyRate, gte: minRate };
   if (maxRate !== undefined) profileWhere.hourlyRate = { ...profileWhere.hourlyRate, lte: maxRate };
@@ -21,7 +20,7 @@ export const getAllTutors = async (filters: {
   const userWhere: any = {
     role: "TRAINER",
     status: "ACTIVE",
-    trainerProfile: profileWhere,
+    ...(Object.keys(profileWhere).length > 0 && { trainerProfile: profileWhere }),
   };
 
   if (search) {
