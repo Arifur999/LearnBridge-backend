@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsx *)"
+      "Bash(npx tsx *)",
+      "Read(//e/ph level 2 assingment/assingment-4-frontend/learnbridge-frontend/**)",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).dependencies.next || require\\('./package.json'\\).devDependencies.next\\)\")"
     ]
   }
 }
