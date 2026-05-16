@@ -18,6 +18,7 @@ import categoryRoutes from './module/category/category.route';
 import tutorRoutes from './module/tutor/tutor.route';
 import paymentRoutes from './module/payment/payment.route';
 import uploadRoutes from './module/upload/upload.route';
+import aiRoutes from './module/ai/ai.route';
 
 const app: Application = express();
 
@@ -64,6 +65,9 @@ app.use("/api/v1/tutors", tutorRoutes);
 
 // File upload (Cloudinary)
 app.use("/api/v1/upload", uploadRoutes);
+
+// AI assistant
+app.use("/api/v1/ai", aiRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
   res.send('SkillBridge API is running');

@@ -8,7 +8,7 @@ const createBookingPaymentController = async (req: AuthRequest, res: Response) =
     const studentId = req.user!.userId;
     const { bookingId } = req.params;
 
-    const result = await PaymentService.createBookingCheckoutSession(studentId, bookingId);
+    const result = await PaymentService.createBookingCheckoutSession(studentId, bookingId!);
 
     res.status(201).json({
       success: true,
@@ -38,7 +38,7 @@ const verifyPaymentSessionController = async (req: AuthRequest, res: Response) =
     const studentId = req.user!.userId;
     const { sessionId } = req.params;
 
-    const result = await PaymentService.verifyPaymentSession(sessionId, studentId);
+    const result = await PaymentService.verifyPaymentSession(sessionId!, studentId);
 
     res.status(200).json({ success: true, data: result });
   } catch (error: any) {
