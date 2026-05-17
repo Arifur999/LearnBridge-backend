@@ -8,6 +8,10 @@ import {
   updateUserStatusController,
   updateUserRoleController,
   getAllBookingsController,
+  deleteUserController,
+  getFeaturedTutorsController,
+  addFeaturedTutorController,
+  removeFeaturedTutorController,
 } from "./admin.controller";
 import { PaymentController } from "../payment/payment.controller";
 
@@ -61,6 +65,21 @@ router.patch(
   verifyAdmin,
   approveTrainerController
 );
+
+// Delete user (admin only)
+router.delete(
+  "/users/:userId",
+  verifyToken,
+  verifyAdmin,
+  deleteUserController
+);
+
+// Featured tutors
+router.get("/featured-tutors", verifyToken, verifyAdmin, getFeaturedTutorsController);
+router.post("/featured-tutors", verifyToken, verifyAdmin, addFeaturedTutorController);
+router.post("/featured-tutors/:tutorId", verifyToken, verifyAdmin, addFeaturedTutorController);
+router.patch("/featured-tutors/:tutorId", verifyToken, verifyAdmin, addFeaturedTutorController);
+router.delete("/featured-tutors/:tutorId", verifyToken, verifyAdmin, removeFeaturedTutorController);
 
 // Get all payments (admin only)
 router.get(

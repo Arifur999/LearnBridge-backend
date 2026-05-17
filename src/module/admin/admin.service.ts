@@ -120,6 +120,44 @@ export const updateUserRole = async (userId: string, newRole: "STUDENT" | "TRAIN
   });
 };
 
+// Delete user by ID
+export const deleteUser = async (userId: string) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error("USER_NOT_FOUND");
+  await prisma.user.delete({ where: { id: userId } });
+  return { id: userId };
+};
+
+// Get all featured tutors
+export const getFeaturedTutors = async () => {
+  return prisma.trainerProfile.findMany({
+    where: { isFeatured: true },
+    include: {
+      user: { select: { id: true, name: true, email: true } },
+    },
+  });
+};
+
+// Add tutor to featured (by TrainerProfile id)
+export const addFeaturedTutor = async (profileId: string) => {
+  const profile = await prisma.trainerProfile.findUnique({ where: { id: profileId } });
+  if (!profile) throw new Error("PROFILE_NOT_FOUND");
+  return prisma.trainerProfile.update({
+    where: { id: profileId },
+    data: { isFeatured: true },
+  });
+};
+
+// Remove tutor from featured (by TrainerProfile id)
+export const removeFeaturedTutor = async (profileId: string) => {
+  const profile = await prisma.trainerProfile.findUnique({ where: { id: profileId } });
+  if (!profile) throw new Error("PROFILE_NOT_FOUND");
+  return prisma.trainerProfile.update({
+    where: { id: profileId },
+    data: { isFeatured: false },
+  });
+};
+
 // Get all bookings (admin view)
 export const getAllBookings = async (filters: {
   status?: string;

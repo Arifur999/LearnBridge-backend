@@ -6,6 +6,10 @@ import {
   updateUserStatus,
   updateUserRole,
   getAllBookings,
+  deleteUser,
+  getFeaturedTutors,
+  addFeaturedTutor,
+  removeFeaturedTutor,
 } from "./admin.service";
 
 
@@ -158,6 +162,63 @@ export const updateUserRoleController = async (
   } catch (error: any) {
     if (error.message === "USER_NOT_FOUND") {
       return res.status(404).json({ success: false, message: "User not found" });
+    }
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const deleteUserController = async (
+  req: Request<{ userId: string }>,
+  res: Response
+) => {
+  try {
+    const { userId } = req.params;
+    await deleteUser(userId);
+    res.status(200).json({ success: true, message: "User deleted successfully" });
+  } catch (error: any) {
+    if (error.message === "USER_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const getFeaturedTutorsController = async (_req: Request, res: Response) => {
+  try {
+    const tutors = await getFeaturedTutors();
+    res.status(200).json({ success: true, data: tutors });
+  } catch {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const addFeaturedTutorController = async (req: Request, res: Response) => {
+  try {
+    const tutorId = req.params.tutorId ?? req.body.tutorId;
+    if (!tutorId) {
+      return res.status(400).json({ success: false, message: "tutorId is required" });
+    }
+    const profile = await addFeaturedTutor(tutorId);
+    res.status(200).json({ success: true, message: "Tutor added to featured", data: profile });
+  } catch (error: any) {
+    if (error.message === "PROFILE_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: "Tutor profile not found" });
+    }
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const removeFeaturedTutorController = async (
+  req: Request<{ tutorId: string }>,
+  res: Response
+) => {
+  try {
+    const { tutorId } = req.params;
+    await removeFeaturedTutor(tutorId);
+    res.status(200).json({ success: true, message: "Tutor removed from featured" });
+  } catch (error: any) {
+    if (error.message === "PROFILE_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: "Tutor profile not found" });
     }
     res.status(500).json({ success: false, message: "Internal server error" });
   }

@@ -7,6 +7,7 @@ model TrainerProfile {
   hourlyRate   Float?
   profileImage String?
   isApproved   Boolean @default(false)
+  isFeatured   Boolean @default(false)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

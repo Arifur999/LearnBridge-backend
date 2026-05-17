@@ -1,6 +1,22 @@
+import "dotenv/config";
 import { Response } from "express";
+import { v2 as cloudinaryV2 } from "cloudinary";
 import { AuthRequest } from "../../middlewares/verifyToken";
-import { cloudinary } from "../../config/cloudinary";
+
+const getCloudinaryInstance = () => {
+  const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
+  const api_key = process.env.CLOUDINARY_API_KEY;
+  const api_secret = process.env.CLOUDINARY_API_SECRET;
+
+  if (!cloud_name || !api_key || !api_secret) {
+    throw new Error(
+      `Cloudinary credentials missing. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in .env`
+    );
+  }
+
+  cloudinaryV2.config({ cloud_name, api_key, api_secret });
+  return cloudinaryV2;
+};
 
 export const uploadImageController = async (req: AuthRequest, res: Response) => {
   try {
@@ -13,14 +29,16 @@ export const uploadImageController = async (req: AuthRequest, res: Response) => 
       return res.status(400).json({ success: false, message: "Only JPG, PNG, WEBP or GIF allowed" });
     }
 
+    const cl = getCloudinaryInstance();
+
     const result = await new Promise<{ secure_url: string; public_id: string }>(
       (resolve, reject) => {
-        cloudinary.uploader
+        cl.uploader
           .upload_stream(
             {
-              folder: "learnbridge/courses",
+              folder: "learnbridge/profiles",
               resource_type: "image",
-              transformation: [{ width: 800, height: 450, crop: "fill", quality: "auto" }],
+              transformation: [{ width: 800, crop: "limit", quality: "auto" }],
             },
             (error, result) => {
               if (error || !result) reject(error ?? new Error("Upload failed"));
