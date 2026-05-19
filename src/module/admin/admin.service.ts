@@ -138,22 +138,34 @@ export const getFeaturedTutors = async () => {
   });
 };
 
-// Add tutor to featured (by TrainerProfile id)
-export const addFeaturedTutor = async (profileId: string) => {
-  const profile = await prisma.trainerProfile.findUnique({ where: { id: profileId } });
-  if (!profile) throw new Error("PROFILE_NOT_FOUND");
+// Resolve TrainerProfile by profile id OR user id
+const resolveTrainerProfile = async (idOrUserId: string) => {
+  const byId = await prisma.trainerProfile.findUnique({ where: { id: idOrUserId } });
+  if (byId) return byId;
+  const byUser = await prisma.trainerProfile.findUnique({ where: { userId: idOrUserId } });
+  if (byUser) return byUser;
+
+  // No profile yet — create a minimal one so we can mark it featured
+  const user = await prisma.user.findUnique({ where: { id: idOrUserId } });
+  if (!user || user.role !== "TRAINER") throw new Error("PROFILE_NOT_FOUND");
+  return prisma.trainerProfile.create({ data: { userId: idOrUserId } });
+};
+
+// Add tutor to featured (by TrainerProfile id OR user id)
+export const addFeaturedTutor = async (idOrUserId: string) => {
+  const profile = await resolveTrainerProfile(idOrUserId);
   return prisma.trainerProfile.update({
-    where: { id: profileId },
+    where: { id: profile.id },
     data: { isFeatured: true },
   });
 };
 
-// Remove tutor from featured (by TrainerProfile id)
-export const removeFeaturedTutor = async (profileId: string) => {
-  const profile = await prisma.trainerProfile.findUnique({ where: { id: profileId } });
+// Remove tutor from featured (by TrainerProfile id OR user id)
+export const removeFeaturedTutor = async (idOrUserId: string) => {
+  const profile = await resolveTrainerProfile(idOrUserId).catch(() => null);
   if (!profile) throw new Error("PROFILE_NOT_FOUND");
   return prisma.trainerProfile.update({
-    where: { id: profileId },
+    where: { id: profile.id },
     data: { isFeatured: false },
   });
 };

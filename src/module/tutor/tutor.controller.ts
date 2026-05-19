@@ -11,13 +11,16 @@ import { BookingService } from "../booking/booking.service";
 // Public: list all approved tutors with filters
 export const getTutors = async (req: Request, res: Response) => {
   try {
-    const { search, subject, minRate, maxRate, page, limit } = req.query;
+    const { search, subject, category, minRate, minPrice, maxRate, maxPrice, page, limit } = req.query;
 
     const filters: Parameters<typeof getAllTutors>[0] = {
       ...(search && { search: search as string }),
       ...(subject && { subject: subject as string }),
+      ...(category && { category: category as string }),
       ...(minRate && { minRate: parseFloat(minRate as string) }),
+      ...(minPrice && { minPrice: parseFloat(minPrice as string) }),
       ...(maxRate && { maxRate: parseFloat(maxRate as string) }),
+      ...(maxPrice && { maxPrice: parseFloat(maxPrice as string) }),
       page: page ? parseInt(page as string) : 1,
       limit: limit ? parseInt(limit as string) : 10,
     };

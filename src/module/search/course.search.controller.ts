@@ -6,18 +6,12 @@ export const searchCoursesController = async (
   res: Response
 ) => {
   try {
-    const {
-      search,
-      category,
-      minPrice,
-      maxPrice,
-      page,
-      limit,
-    } = req.query;
+    const { search, category, minPrice, maxPrice, sort, page, limit } = req.query;
 
     const result = await searchCourses({
       search: search as string,
       category: category as string,
+      sort: sort as string,
       ...(minPrice && { minPrice: Number(minPrice) }),
       ...(maxPrice && { maxPrice: Number(maxPrice) }),
       page: page ? Number(page) : 1,

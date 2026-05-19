@@ -3,6 +3,7 @@ model TrainerProfile {
   userId       String  @unique
   bio          String?
   subjects     String?
+  category     String?
   experience   Int?
   hourlyRate   Float?
   profileImage String?

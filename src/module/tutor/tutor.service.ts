@@ -3,31 +3,57 @@ import { prisma } from "../../lib/prisma";
 export const getAllTutors = async (filters: {
   search?: string;
   subject?: string;
+  category?: string;
   minRate?: number;
+  minPrice?: number;
   maxRate?: number;
+  maxPrice?: number;
   page?: number;
   limit?: number;
 }) => {
-  const { search, subject, minRate, maxRate, page = 1, limit = 10 } = filters;
+  const {
+    search,
+    subject, category,
+    minRate, minPrice,
+    maxRate, maxPrice,
+    page = 1, limit = 10,
+  } = filters;
+
+  const effectiveSubject = subject ?? category;
+  const effectiveMin = minRate ?? minPrice;
+  const effectiveMax = maxRate ?? maxPrice;
 
   const skip = (page - 1) * limit;
 
   const profileWhere: any = {};
-  if (subject) profileWhere.subjects = { contains: subject, mode: "insensitive" };
-  if (minRate !== undefined) profileWhere.hourlyRate = { ...profileWhere.hourlyRate, gte: minRate };
-  if (maxRate !== undefined) profileWhere.hourlyRate = { ...profileWhere.hourlyRate, lte: maxRate };
+  if (effectiveSubject) profileWhere.subjects = { contains: effectiveSubject, mode: "insensitive" };
+  if (effectiveMin !== undefined) profileWhere.hourlyRate = { ...profileWhere.hourlyRate, gte: effectiveMin };
+  if (effectiveMax !== undefined) profileWhere.hourlyRate = { ...profileWhere.hourlyRate, lte: effectiveMax };
 
+  // Show any non-blocked user who is a TRAINER role OR has a TrainerProfile set up
   const userWhere: any = {
-    role: "TRAINER",
-    status: "ACTIVE",
-    ...(Object.keys(profileWhere).length > 0 && { trainerProfile: profileWhere }),
+    status: { not: "BLOCKED" },
+    AND: [
+      {
+        OR: [
+          { role: "TRAINER" },
+          { trainerProfile: { isNot: null } },
+        ],
+      },
+    ],
   };
 
+  if (Object.keys(profileWhere).length > 0) {
+    userWhere.trainerProfile = profileWhere;
+  }
+
   if (search) {
-    userWhere.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { trainerProfile: { subjects: { contains: search, mode: "insensitive" } } },
-    ];
+    userWhere.AND.push({
+      OR: [
+        { name: { contains: search, mode: "insensitive" } },
+        { trainerProfile: { subjects: { contains: search, mode: "insensitive" } } },
+      ],
+    });
   }
 
   const [tutors, total] = await Promise.all([
@@ -59,7 +85,7 @@ export const getAllTutors = async (filters: {
       subjects: tutor.trainerProfile?.subjects,
       experience: tutor.trainerProfile?.experience,
       hourlyRate: tutor.trainerProfile?.hourlyRate,
-      profileImage: tutor.trainerProfile?.profileImage,
+      profileImage: tutor.trainerProfile?.profileImage ?? tutor.image ?? null,
       avgRating: parseFloat(avgRating.toFixed(1)),
       totalReviews: reviews.length,
     };
@@ -110,7 +136,7 @@ export const getTutorById = async (tutorId: string) => {
     subjects: tutor.trainerProfile?.subjects,
     experience: tutor.trainerProfile?.experience,
     hourlyRate: tutor.trainerProfile?.hourlyRate,
-    profileImage: tutor.trainerProfile?.profileImage,
+    profileImage: tutor.trainerProfile?.profileImage ?? tutor.image ?? null,
     availableSlots: tutor.slots,
     reviews: (tutor as any).receivedReviews,
     avgRating: parseFloat(avgRating.toFixed(1)),

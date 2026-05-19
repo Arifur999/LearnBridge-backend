@@ -31,23 +31,14 @@ export const uploadImageController = async (req: AuthRequest, res: Response) => 
 
     const cl = getCloudinaryInstance();
 
-    const result = await new Promise<{ secure_url: string; public_id: string }>(
-      (resolve, reject) => {
-        cl.uploader
-          .upload_stream(
-            {
-              folder: "learnbridge/profiles",
-              resource_type: "image",
-              transformation: [{ width: 800, crop: "limit", quality: "auto" }],
-            },
-            (error, result) => {
-              if (error || !result) reject(error ?? new Error("Upload failed"));
-              else resolve(result as { secure_url: string; public_id: string });
-            }
-          )
-          .end(req.file!.buffer);
-      }
-    );
+    const base64 = req.file.buffer.toString("base64");
+    const dataUri = `data:${req.file.mimetype};base64,${base64}`;
+
+    const result = await cl.uploader.upload(dataUri, {
+      folder: "learnbridge",
+      resource_type: "image",
+      transformation: [{ width: 800, crop: "limit", quality: "auto" }],
+    });
 
     res.status(200).json({ success: true, url: result.secure_url, publicId: result.public_id });
   } catch (error: any) {
