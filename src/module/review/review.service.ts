@@ -20,7 +20,7 @@ const addReviewIntoDB = async (payload: {
       where: {
         id: payload.bookingId,
         studentId: payload.studentId,
-        status: "COMPLETED" as any,
+        status: { in: ["CONFIRMED", "COMPLETED"] as any[] },
       },
     });
 

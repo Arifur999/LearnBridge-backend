@@ -1,7 +1,7 @@
 import { Router } from "express";
 import express from "express";
 import { verifyToken } from "../../middlewares/verifyToken";
-import { verifyStudent, verifyTrainer, verifyAdmin } from "../../middlewares/role";
+import { verifyStudent, verifyTrainer } from "../../middlewares/role";
 import { PaymentController } from "./payment.controller";
 
 const router = Router();
@@ -32,6 +32,7 @@ router.get(
 // Student: pay with custom card form (Stripe validates card server-side)
 router.post(
   "/pay",
+  express.json(),
   verifyToken,
   verifyStudent,
   PaymentController.chargeCardController

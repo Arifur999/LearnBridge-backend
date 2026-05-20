@@ -258,7 +258,34 @@ const getAllPaymentsFromDB = async (filters: {
   };
 };
 
-// ── Pay with custom card form (test mode — Stripe validates card) ─────────────
+// Map of Stripe test card numbers → test tokens.
+// Valid cards succeed; decline-mapped cards are rejected by Stripe.
+// Any number NOT in this map is treated as an invalid card.
+const STRIPE_TEST_TOKENS: Record<string, string> = {
+  // ── Approved ──────────────────────────────────────────────
+  "4242424242424242": "tok_visa",
+  "4000056655665556": "tok_visa_debit",
+  "5555555555554444": "tok_mastercard",
+  "2223003122003222": "tok_mastercard",
+  "5200828282828210": "tok_mastercard_debit",
+  "5105105105105100": "tok_mastercard_prepaid",
+  "378282246310005":  "tok_amex",
+  "371449635398431":  "tok_amex",
+  "6011111111111117": "tok_discover",
+  "6011000990139424": "tok_discover",
+  "3056930009020004": "tok_diners",
+  "36227206271667":   "tok_diners",
+  "3566002020360505": "tok_jcb",
+  "6200000000000005": "tok_unionpay",
+  // ── Declined ──────────────────────────────────────────────
+  "4000000000000002": "tok_chargeDeclined",
+  "4000000000009995": "tok_chargeDeclinedInsufficientFunds",
+  "4000000000009987": "tok_chargeDeclinedLostCard",
+  "4000000000009979": "tok_chargeDeclinedStolenCard",
+  "4100000000000019": "tok_chargeDeclinedFraudulent",
+};
+
+// ── Pay with custom card form (test mode — uses Stripe test tokens) ───────────
 const chargeCard = async (
   studentId: string,
   slotId: string,
@@ -285,55 +312,45 @@ const chargeCard = async (
   }
 
   const amountInCents = Math.round(amount * 100);
+  const rawNumber = card.number.replace(/\s/g, "");
 
-  // Step 1: Create PaymentMethod — Stripe validates the card number here
-  let paymentMethod: Stripe.PaymentMethod;
-  try {
-    paymentMethod = await stripe.paymentMethods.create({
-      type: "card",
-      card: {
-        number: card.number,
-        exp_month: card.exp_month,
-        exp_year: card.exp_year,
-        cvc: card.cvc,
-      },
-    } as any);
-  } catch (err: any) {
-    throw new Error(err?.message ?? "Invalid card details");
+  // Resolve card number to a Stripe test token — unknown numbers are rejected
+  const token = STRIPE_TEST_TOKENS[rawNumber];
+  if (!token) {
+    throw new Error("Invalid card number. Please check your card details and try again.");
   }
 
-  // Step 2: Create and confirm PaymentIntent
-  let paymentIntent: Stripe.PaymentIntent;
+  // Charge via Stripe test token — Stripe declines the known decline tokens
+  let charge: Stripe.Charge;
   try {
-    paymentIntent = await stripe.paymentIntents.create({
+    charge = await stripe.charges.create({
       amount: amountInCents,
-      currency: "bdt",
-      payment_method: paymentMethod.id,
-      confirm: true,
-      return_url: `${FRONTEND_URL}/payments/success`,
-    } as any);
+      currency: "usd",
+      source: token,
+      description: "LearnBridge tutoring session",
+    });
   } catch (err: any) {
-    throw new Error(err?.message ?? "Payment failed");
+    throw new Error(err?.message ?? "Card was declined.");
   }
 
-  if (paymentIntent.status !== "succeeded" && paymentIntent.status !== "requires_action") {
-    throw new Error("Card was declined. Please use a valid test card.");
+  if (charge.status !== "succeeded") {
+    throw new Error("Payment failed. Card was declined.");
   }
 
-  // Step 3: Create booking + mark slot booked
+  // Create booking + mark slot booked
   const booking = await prisma.booking.create({
     data: { slotId, studentId, price: amount, status: "CONFIRMED" },
   });
   await prisma.slot.update({ where: { id: slotId }, data: { isBooked: true } });
 
-  // Step 4: Record payment
+  // Record payment
   await (prisma.payment as any).create({
     data: {
       studentId,
       bookingId: booking.id,
       amount,
-      currency: "bdt",
-      stripePaymentIntentId: paymentIntent.id,
+      currency: "usd",
+      stripePaymentIntentId: charge.payment_intent as string ?? charge.id,
       status: "COMPLETED",
     },
   });
