@@ -19,14 +19,23 @@ const createSlotIntoDB = async (payload: {
 };
 
 const createBookingIntoDB = async (studentId: string, slotId: string) => {
-  const slot = await prisma.slot.findUnique({ where: { id: slotId } });
+  const slot = await prisma.slot.findUnique({
+    where: { id: slotId },
+    include: {
+      trainer: {
+        include: { trainerProfile: { select: { hourlyRate: true } } },
+      },
+    },
+  });
 
   if (!slot) throw new Error("SLOT_NOT_FOUND");
   if (slot.isBooked) throw new Error("SLOT_ALREADY_BOOKED");
 
+  const price = slot.trainer?.trainerProfile?.hourlyRate ?? 0;
+
   const result = await prisma.$transaction(async (tx) => {
     const booking = await tx.booking.create({
-      data: { studentId, slotId, status: "CONFIRMED" as any },
+      data: { studentId, slotId, status: "CONFIRMED" as any, price },
       include: {
         slot: {
           include: {

@@ -29,6 +29,14 @@ router.get(
   PaymentController.verifyPaymentSessionController
 );
 
+// Student: pay with custom card form (Stripe validates card server-side)
+router.post(
+  "/pay",
+  verifyToken,
+  verifyStudent,
+  PaymentController.chargeCardController
+);
+
 // Student: view own payment history
 router.get(
   "/",

@@ -28,6 +28,9 @@ const createBookingPaymentController = async (req: AuthRequest, res: Response) =
     if (error.message === "ALREADY_PAID") {
       return res.status(409).json({ success: false, message: "This booking has already been paid" });
     }
+    if (error.message === "INVALID_AMOUNT") {
+      return res.status(400).json({ success: false, message: "Tutor has not set their hourly rate. Please ask the tutor to update their profile." });
+    }
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
@@ -108,6 +111,29 @@ const getAllPaymentsController = async (req: Request, res: Response) => {
   }
 };
 
+// POST /api/v1/payments/pay  — custom card form with real Stripe validation
+const chargeCardController = async (req: AuthRequest, res: Response) => {
+  try {
+    const studentId = req.user!.userId;
+    const { slotId, cardNumber, expMonth, expYear, cvc } = req.body;
+
+    if (!slotId || !cardNumber || !expMonth || !expYear || !cvc) {
+      return res.status(400).json({ success: false, message: "Missing card or slot details" });
+    }
+
+    const result = await PaymentService.chargeCard(studentId, slotId, {
+      number: String(cardNumber).replace(/\s/g, ""),
+      exp_month: Number(expMonth),
+      exp_year: Number(expYear),
+      cvc: String(cvc),
+    });
+
+    res.status(200).json({ success: true, message: "Payment successful!", data: result });
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err?.message ?? "Payment failed" });
+  }
+};
+
 export const PaymentController = {
   createBookingPaymentController,
   verifyPaymentSessionController,
@@ -115,4 +141,5 @@ export const PaymentController = {
   getMyPaymentsController,
   getTutorPaymentsController,
   getAllPaymentsController,
+  chargeCardController,
 };

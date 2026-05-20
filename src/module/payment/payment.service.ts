@@ -44,6 +44,10 @@ const createBookingCheckoutSession = async (
   const amount = booking.price > 0 ? booking.price : hourlyRate;
   const amountInCents = Math.round(amount * 100);
 
+  if (amountInCents < 50) {
+    throw new Error("INVALID_AMOUNT");
+  }
+
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "payment",
@@ -254,6 +258,89 @@ const getAllPaymentsFromDB = async (filters: {
   };
 };
 
+// ── Pay with custom card form (test mode — Stripe validates card) ─────────────
+const chargeCard = async (
+  studentId: string,
+  slotId: string,
+  card: { number: string; exp_month: number; exp_year: number; cvc: string }
+) => {
+  // Validate slot
+  const slot = await prisma.slot.findUnique({
+    where: { id: slotId },
+    include: {
+      trainer: { include: { trainerProfile: { select: { hourlyRate: true } } } },
+    },
+  });
+  if (!slot) throw new Error("Slot not found");
+  if (slot.isBooked) throw new Error("This slot is already booked");
+
+  const amount = slot.trainer.trainerProfile?.hourlyRate ?? 0;
+  // Stripe minimum is 50 cents; treat 0 as free (skip Stripe, just book)
+  if (amount <= 0) {
+    const booking = await prisma.booking.create({
+      data: { slotId, studentId, price: 0, status: "CONFIRMED" },
+    });
+    await prisma.slot.update({ where: { id: slotId }, data: { isBooked: true } });
+    return { bookingId: booking.id };
+  }
+
+  const amountInCents = Math.round(amount * 100);
+
+  // Step 1: Create PaymentMethod — Stripe validates the card number here
+  let paymentMethod: Stripe.PaymentMethod;
+  try {
+    paymentMethod = await stripe.paymentMethods.create({
+      type: "card",
+      card: {
+        number: card.number,
+        exp_month: card.exp_month,
+        exp_year: card.exp_year,
+        cvc: card.cvc,
+      },
+    } as any);
+  } catch (err: any) {
+    throw new Error(err?.message ?? "Invalid card details");
+  }
+
+  // Step 2: Create and confirm PaymentIntent
+  let paymentIntent: Stripe.PaymentIntent;
+  try {
+    paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInCents,
+      currency: "bdt",
+      payment_method: paymentMethod.id,
+      confirm: true,
+      return_url: `${FRONTEND_URL}/payments/success`,
+    } as any);
+  } catch (err: any) {
+    throw new Error(err?.message ?? "Payment failed");
+  }
+
+  if (paymentIntent.status !== "succeeded" && paymentIntent.status !== "requires_action") {
+    throw new Error("Card was declined. Please use a valid test card.");
+  }
+
+  // Step 3: Create booking + mark slot booked
+  const booking = await prisma.booking.create({
+    data: { slotId, studentId, price: amount, status: "CONFIRMED" },
+  });
+  await prisma.slot.update({ where: { id: slotId }, data: { isBooked: true } });
+
+  // Step 4: Record payment
+  await (prisma.payment as any).create({
+    data: {
+      studentId,
+      bookingId: booking.id,
+      amount,
+      currency: "bdt",
+      stripePaymentIntentId: paymentIntent.id,
+      status: "COMPLETED",
+    },
+  });
+
+  return { bookingId: booking.id };
+};
+
 export const PaymentService = {
   createBookingCheckoutSession,
   verifyPaymentSession,
@@ -261,4 +348,5 @@ export const PaymentService = {
   getMyPaymentsFromDB,
   getTutorPaymentsFromDB,
   getAllPaymentsFromDB,
+  chargeCard,
 };
