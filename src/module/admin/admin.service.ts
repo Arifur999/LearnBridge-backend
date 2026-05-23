@@ -124,7 +124,75 @@ export const updateUserRole = async (userId: string, newRole: "STUDENT" | "TRAIN
 export const deleteUser = async (userId: string) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("USER_NOT_FOUND");
-  await prisma.user.delete({ where: { id: userId } });
+
+  await prisma.$transaction(async (tx) => {
+    const [courses, slots] = await Promise.all([
+      tx.course.findMany({
+        where: { trainerId: userId },
+        select: { id: true },
+      }),
+      tx.slot.findMany({
+        where: { trainerId: userId },
+        select: { id: true },
+      }),
+    ]);
+
+    const courseIds = courses.map((course) => course.id);
+    const slotIds = slots.map((slot) => slot.id);
+    const bookings = await tx.booking.findMany({
+      where: {
+        OR: [
+          { studentId: userId },
+          ...(slotIds.length > 0 ? [{ slotId: { in: slotIds } }] : []),
+        ],
+      },
+      select: { id: true },
+    });
+    const bookingIds = bookings.map((booking) => booking.id);
+
+    await tx.payment.deleteMany({
+      where: {
+        OR: [
+          { studentId: userId },
+          ...(bookingIds.length > 0 ? [{ bookingId: { in: bookingIds } }] : []),
+        ],
+      },
+    });
+
+    await tx.review.deleteMany({
+      where: {
+        OR: [
+          { studentId: userId },
+          { tutorId: userId },
+          ...(bookingIds.length > 0 ? [{ bookingId: { in: bookingIds } }] : []),
+        ],
+      },
+    });
+
+    if (bookingIds.length > 0) {
+      await tx.booking.deleteMany({ where: { id: { in: bookingIds } } });
+    }
+
+    if (slotIds.length > 0) {
+      await tx.slot.deleteMany({ where: { id: { in: slotIds } } });
+    }
+
+    await tx.enrollment.deleteMany({
+      where: {
+        OR: [
+          { studentId: userId },
+          ...(courseIds.length > 0 ? [{ courseId: { in: courseIds } }] : []),
+        ],
+      },
+    });
+
+    if (courseIds.length > 0) {
+      await tx.course.deleteMany({ where: { id: { in: courseIds } } });
+    }
+
+    await tx.user.delete({ where: { id: userId } });
+  });
+
   return { id: userId };
 };
 
