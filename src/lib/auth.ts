@@ -1,0 +1,103 @@
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { bearer, emailOTP } from "better-auth/plugins";
+import { prisma } from "./prisma";
+import { Role, Status } from "../../generated/prisma/enums";
+import { sendEmail } from "../utils/email";
+import { env } from "../config/env";
+
+export const auth = betterAuth({
+  baseURL: env.BETTER_AUTH_URL,
+  secret:  env.BETTER_AUTH_SECRET,
+
+  database: prismaAdapter(prisma, {
+    provider: "postgresql",
+  }),
+
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: false, // enable after email is confirmed working
+  },
+
+  emailVerification: {
+    sendOnSignUp:               true,
+    sendOnSignIn:               false,
+    autoSignInAfterVerification: true,
+  },
+
+  user: {
+    additionalFields: {
+      role: {
+        type:         "string",
+        required:     true,
+        defaultValue: Role.STUDENT,
+        input:        true, // allow client to send role on sign-up
+      },
+      status: {
+        type:         "string",
+        required:     true,
+        defaultValue: Status.ACTIVE,
+      },
+    },
+  },
+
+  plugins: [
+    bearer(),
+    emailOTP({
+      overrideDefaultEmailVerification: true,
+      otpLength:  6,
+      expiresIn:  5 * 60, // 5 minutes
+
+      async sendVerificationOTP({ email, otp, type }) {
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user) return;
+
+        if (type === "email-verification") {
+          if (!user.emailVerified) {
+            sendEmail({
+              to:           email,
+              subject:      "Verify your LearnBridge email",
+              templateName: "otp",
+              templateData: { name: user.name, otp },
+            });
+          }
+        } else if (type === "forget-password") {
+          sendEmail({
+            to:           email,
+            subject:      "LearnBridge — Password Reset OTP",
+            templateName: "otp",
+            templateData: { name: user.name, otp },
+          });
+        }
+      },
+    }),
+  ],
+
+  session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24,      // refresh token every 24h
+    cookieCache: {
+      enabled: true,
+      maxAge:  60 * 60 * 24,      // cache for 1 day
+    },
+  },
+
+  trustedOrigins: [
+    env.BETTER_AUTH_URL,
+    env.FRONTEND_URL,
+  ],
+
+  advanced: {
+    useSecureCookies: false,
+    cookies: {
+      sessionToken: {
+        attributes: {
+          sameSite: "none",
+          secure:   true,
+          httpOnly: true,
+        },
+      },
+    },
+  },
+});

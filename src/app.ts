@@ -1,5 +1,8 @@
 import express, { Application, Request, Response } from 'express';
 import cors from "cors";
+import cookieParser from "cookie-parser";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "./lib/auth";
 
 import authRouter from './module/auth/auth.route';
 import adminRoutes from './module/admin/admin.route';
@@ -22,13 +25,23 @@ import aiRoutes from './module/ai/ai.route';
 
 const app: Application = express();
 
-app.use(cors());
+// ── CORS (credentials required for BetterAuth cookies) ────────
+app.use(cors({
+  origin:         ["http://localhost:3000", "http://localhost:5000"],
+  credentials:    true,
+  methods:        ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
+// ── BetterAuth — MUST be before express.json() ────────────────
+app.use("/api/auth", toNodeHandler(auth));
 
 // ⚠️ Payment webhook MUST be registered before express.json()
 // Stripe sends a raw Buffer body that must not be parsed as JSON
 app.use("/api/v1/payments", paymentRoutes);
 
 app.use(express.json());
+app.use(cookieParser());
 
 // Auth
 app.use("/api/v1/auth", authRouter);

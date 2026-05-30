@@ -1,56 +1,45 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET as string;
+import { fromNodeHeaders } from "better-auth/node";
+import { auth } from "../lib/auth";
 
 export interface AuthRequest extends Request {
   user?: {
     userId: string;
-    role: string;
+    role:   string;
     status: string;
   };
-    params: {
-    [key: string]: string;
-  };
+  params: { [key: string]: string };
 }
 
-
-export const verifyToken = (
+export const verifyToken = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
 
-    if (!authHeader) {
+    if (!session?.user) {
       return res.status(401).json({
         success: false,
-        message: "Authorization header missing",
+        message: "Unauthorized — invalid or expired session",
       });
     }
 
-    const token = authHeader.split(" ")[1];
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Token missing",
-      });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
-      role: string;
-      status: string;
+    // Normalise to the same shape existing routes expect
+    req.user = {
+      userId: session.user.id,
+      role:   String(session.user.role  ?? "STUDENT"),
+      status: String(session.user.status ?? "ACTIVE"),
     };
 
-    req.user = decoded;
     next();
-  } catch (error) {
+  } catch {
     return res.status(401).json({
       success: false,
-      message: "Invalid or expired token",
+      message: "Unauthorized",
     });
   }
 };
