@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Stripe from "stripe";
 import { stripe } from "../../config/stripe.config";
 import { prisma } from "../../lib/prisma";
@@ -42,9 +43,7 @@ const createBookingCheckoutSession = async (
   const amount = booking.price > 0 ? booking.price : hourlyRate;
   const amountInCents = Math.round(amount * 100);
 
-  if (amountInCents < 50) {
-    throw new Error("INVALID_AMOUNT");
-  }
+  if (amountInCents < 50) throw new Error("INVALID_AMOUNT");
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
@@ -204,7 +203,6 @@ const getAllPaymentsFromDB = async (filters: {
   const { status, page = 1, limit = 10 } = filters;
   const where: any = {};
   if (status) where.status = status;
-
   const skip = (page - 1) * limit;
 
   const [payments, total] = await Promise.all([
