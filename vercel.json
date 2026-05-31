@@ -1,13 +1,14 @@
 {
   "version": 2,
+  "buildCommand": "npx prisma generate",
   "builds": [
     {
       "src": "api/index.ts",
       "use": "@vercel/node",
       "config": {
         "includeFiles": [
-          "generated/prisma/**",
-          "src/templates/**"
+          "src/templates/**",
+          "prisma/**"
         ]
       }
     }
