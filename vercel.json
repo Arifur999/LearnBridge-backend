@@ -1,14 +1,13 @@
 {
   "version": 2,
-  "buildCommand": "npx prisma generate",
+  "buildCommand": "npx prisma generate && npx esbuild api/index.ts --bundle --packages=external --platform=node --target=node18 --format=esm --outfile=dist/api/index.js",
   "builds": [
     {
-      "src": "api/index.ts",
+      "src": "dist/api/index.js",
       "use": "@vercel/node",
       "config": {
         "includeFiles": [
-          "src/templates/**",
-          "prisma/**"
+          "src/templates/**"
         ]
       }
     }
@@ -16,7 +15,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "api/index.ts"
+      "dest": "dist/api/index.js"
     }
   ]
 }

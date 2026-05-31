@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { bearer, emailOTP } from "better-auth/plugins";
 import { prisma } from "./prisma";
-import { Role, Status } from "../../generated/prisma/enums";
+import { Role, Status } from "@prisma/client";
 import { sendEmail } from "../utils/email";
 import { env } from "../config/env";
 
