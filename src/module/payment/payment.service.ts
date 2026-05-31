@@ -4,7 +4,6 @@ import { prisma } from "../../lib/prisma";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
-// ── Create Stripe checkout session for a booking ──────────────────────────────
 const createBookingCheckoutSession = async (
   studentId: string,
   bookingId: string
@@ -31,7 +30,6 @@ const createBookingCheckoutSession = async (
   if (booking.studentId !== studentId) throw new Error("FORBIDDEN");
   if (booking.status === "CANCELLED") throw new Error("BOOKING_CANCELLED");
 
-  // Check if already paid
   const existingPayment = await (prisma.payment as any).findUnique({
     where: { bookingId },
   });
@@ -65,23 +63,15 @@ const createBookingCheckoutSession = async (
         quantity: 1,
       },
     ],
-    metadata: {
-      bookingId,
-      studentId,
-    },
+    metadata: { bookingId, studentId },
     success_url: `${FRONTEND_URL}/dashboard/bookings?payment=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${FRONTEND_URL}/dashboard/bookings?payment=cancelled`,
-    expires_at: Math.floor(Date.now() / 1000) + 35 * 60, // 35 minutes
+    expires_at: Math.floor(Date.now() / 1000) + 35 * 60,
   });
 
-  // Upsert payment record
   await (prisma.payment as any).upsert({
     where: { bookingId },
-    update: {
-      stripeSessionId: session.id,
-      amount,
-      status: "PENDING",
-    },
+    update: { stripeSessionId: session.id, amount, status: "PENDING" },
     create: {
       studentId,
       bookingId,
@@ -95,7 +85,6 @@ const createBookingCheckoutSession = async (
   return { url: session.url, sessionId: session.id };
 };
 
-// ── Verify a checkout session ─────────────────────────────────────────────────
 const verifyPaymentSession = async (sessionId: string, studentId: string) => {
   const session = await stripe.checkout.sessions.retrieve(sessionId);
 
@@ -123,7 +112,6 @@ const verifyPaymentSession = async (sessionId: string, studentId: string) => {
   };
 };
 
-// ── Stripe webhook handler ────────────────────────────────────────────────────
 const handleStripeWebhook = async (rawBody: Buffer, signature: string) => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET as string;
 
@@ -138,13 +126,9 @@ const handleStripeWebhook = async (rawBody: Buffer, signature: string) => {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
       const { bookingId } = session.metadata ?? {};
-
       if (!bookingId) break;
 
-      // Idempotency check
-      const existing = await (prisma.payment as any).findUnique({
-        where: { bookingId },
-      });
+      const existing = await (prisma.payment as any).findUnique({ where: { bookingId } });
       if (existing?.status === "COMPLETED") break;
 
       await (prisma.payment as any).update({
@@ -180,7 +164,6 @@ const handleStripeWebhook = async (rawBody: Buffer, signature: string) => {
   }
 };
 
-// ── Student: get own payments ─────────────────────────────────────────────────
 const getMyPaymentsFromDB = async (studentId: string) => {
   return (prisma.payment as any).findMany({
     where: { studentId },
@@ -199,26 +182,20 @@ const getMyPaymentsFromDB = async (studentId: string) => {
   });
 };
 
-// ── Tutor: get payments for their sessions ────────────────────────────────────
 const getTutorPaymentsFromDB = async (tutorId: string) => {
   return (prisma.payment as any).findMany({
     where: {
       status: "COMPLETED",
-      booking: {
-        slot: { trainerId: tutorId },
-      },
+      booking: { slot: { trainerId: tutorId } },
     },
     include: {
       student: { select: { id: true, name: true, email: true } },
-      booking: {
-        include: { slot: true },
-      },
+      booking: { include: { slot: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 };
 
-// ── Admin: get all payments with pagination ───────────────────────────────────
 const getAllPaymentsFromDB = async (filters: {
   status?: string;
   page?: number;
@@ -258,11 +235,7 @@ const getAllPaymentsFromDB = async (filters: {
   };
 };
 
-// Map of Stripe test card numbers → test tokens.
-// Valid cards succeed; decline-mapped cards are rejected by Stripe.
-// Any number NOT in this map is treated as an invalid card.
 const STRIPE_TEST_TOKENS: Record<string, string> = {
-  // ── Approved ──────────────────────────────────────────────
   "4242424242424242": "tok_visa",
   "4000056655665556": "tok_visa_debit",
   "5555555555554444": "tok_mastercard",
@@ -277,7 +250,6 @@ const STRIPE_TEST_TOKENS: Record<string, string> = {
   "36227206271667":   "tok_diners",
   "3566002020360505": "tok_jcb",
   "6200000000000005": "tok_unionpay",
-  // ── Declined ──────────────────────────────────────────────
   "4000000000000002": "tok_chargeDeclined",
   "4000000000009995": "tok_chargeDeclinedInsufficientFunds",
   "4000000000009987": "tok_chargeDeclinedLostCard",
@@ -285,13 +257,11 @@ const STRIPE_TEST_TOKENS: Record<string, string> = {
   "4100000000000019": "tok_chargeDeclinedFraudulent",
 };
 
-// ── Pay with custom card form (test mode — uses Stripe test tokens) ───────────
 const chargeCard = async (
   studentId: string,
   slotId: string,
   card: { number: string; exp_month: number; exp_year: number; cvc: string }
 ) => {
-  // Validate slot
   const slot = await prisma.slot.findUnique({
     where: { id: slotId },
     include: {
@@ -302,7 +272,7 @@ const chargeCard = async (
   if (slot.isBooked) throw new Error("This slot is already booked");
 
   const amount = slot.trainer.trainerProfile?.hourlyRate ?? 0;
-  // Stripe minimum is 50 cents; treat 0 as free (skip Stripe, just book)
+
   if (amount <= 0) {
     const booking = await prisma.booking.create({
       data: { slotId, studentId, price: 0, status: "CONFIRMED" },
@@ -314,13 +284,11 @@ const chargeCard = async (
   const amountInCents = Math.round(amount * 100);
   const rawNumber = card.number.replace(/\s/g, "");
 
-  // Resolve card number to a Stripe test token — unknown numbers are rejected
   const token = STRIPE_TEST_TOKENS[rawNumber];
   if (!token) {
     throw new Error("Invalid card number. Please check your card details and try again.");
   }
 
-  // Charge via Stripe test token — Stripe declines the known decline tokens
   let charge: Stripe.Charge;
   try {
     charge = await stripe.charges.create({
@@ -337,13 +305,11 @@ const chargeCard = async (
     throw new Error("Payment failed. Card was declined.");
   }
 
-  // Create booking + mark slot booked
   const booking = await prisma.booking.create({
     data: { slotId, studentId, price: amount, status: "CONFIRMED" },
   });
   await prisma.slot.update({ where: { id: slotId }, data: { isBooked: true } });
 
-  // Record payment
   await (prisma.payment as any).create({
     data: {
       studentId,

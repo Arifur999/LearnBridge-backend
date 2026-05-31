@@ -28,7 +28,6 @@ export const verifyToken = async (
       });
     }
 
-    // Normalise to the same shape existing routes expect
     req.user = {
       userId: session.user.id,
       role:   String(session.user.role  ?? "STUDENT"),

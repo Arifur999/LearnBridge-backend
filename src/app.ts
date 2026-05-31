@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
+import { env } from "./config/env";
 
 import authRouter from './module/auth/auth.route';
 import adminRoutes from './module/admin/admin.route';
@@ -25,65 +26,60 @@ import aiRoutes from './module/ai/ai.route';
 
 const app: Application = express();
 
-// ── CORS (credentials required for BetterAuth cookies) ────────
+const allowedOrigins = [
+  env.FRONTEND_URL,
+  "http://localhost:3000",
+  "http://localhost:5000",
+].filter(Boolean);
+
 app.use(cors({
-  origin:         ["http://localhost:3000", "http://localhost:5000"],
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials:    true,
   methods:        ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-// ── BetterAuth — MUST be before express.json() ────────────────
+// BetterAuth must be mounted before express.json()
 app.use("/api/auth", toNodeHandler(auth));
 
-// ⚠️ Payment webhook MUST be registered before express.json()
-// Stripe sends a raw Buffer body that must not be parsed as JSON
+// Stripe webhook needs raw body — registered before express.json()
 app.use("/api/v1/payments", paymentRoutes);
 
 app.use(express.json());
 app.use(cookieParser());
 
-// Auth
 app.use("/api/v1/auth", authRouter);
 
-// Admin
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/admin", adminCourseRoutes);
 app.use("/api/v1/admin", adminDashboardRoutes);
 
-// Trainer (dashboard MUST come before trainer/:id dynamic route)
+// Trainer dashboard must come before /:id dynamic route
 app.use("/api/v1/trainer", trainerDashboardRoutes);
 app.use("/api/v1/trainer", trainerRoutes);
 
-// Student (course browsing + enrollments + dashboard)
 app.use("/api/v1/student", studentCourseRoutes);
 app.use("/api/v1/student", enrollmentRoutes);
 app.use("/api/v1/student", studentEnrollmentRoutes);
 app.use("/api/v1/student", studentDashboardRoutes);
 
-// Public course search
 app.use("/api/v1", courseSearchRoutes);
-
-// Bookings & slots
 app.use("/api/v1", bookingRoutes);
 
-// Reviews
 app.use("/api/v1/reviews", reviewRoutes);
-
-// Categories
 app.use("/api/v1/categories", categoryRoutes);
-
-// Tutors — public listing + public slots + tutor self-management
 app.use("/api/v1/tutors", tutorRoutes);
-
-// File upload (Cloudinary)
 app.use("/api/v1/upload", uploadRoutes);
-
-// AI assistant
 app.use("/api/v1/ai", aiRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
-  res.send('SkillBridge API is running');
+  res.send('LearnBridge API is running');
 });
 
 export default app;

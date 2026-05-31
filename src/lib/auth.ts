@@ -34,8 +34,8 @@ export const auth = betterAuth({
   },
 
   emailVerification: {
-    sendOnSignUp:               true,
-    sendOnSignIn:               false,
+    sendOnSignUp:                true,
+    sendOnSignIn:                false,
     autoSignInAfterVerification: true,
   },
 
@@ -45,7 +45,7 @@ export const auth = betterAuth({
         type:         "string",
         required:     true,
         defaultValue: Role.STUDENT,
-        input:        true, // allow client to send role on sign-up
+        input:        true,
       },
       status: {
         type:         "string",
@@ -60,7 +60,7 @@ export const auth = betterAuth({
     emailOTP({
       overrideDefaultEmailVerification: true,
       otpLength:  6,
-      expiresIn:  5 * 60, // 5 minutes
+      expiresIn:  5 * 60,
 
       async sendVerificationOTP({ email, otp, type }) {
         const user = await prisma.user.findUnique({ where: { email } });
@@ -89,11 +89,11 @@ export const auth = betterAuth({
   ],
 
   session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24,      // refresh token every 24h
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
     cookieCache: {
       enabled: true,
-      maxAge:  60 * 60 * 24,      // cache for 1 day
+      maxAge:  60 * 60 * 24,
     },
   },
 
@@ -103,12 +103,12 @@ export const auth = betterAuth({
   ],
 
   advanced: {
-    useSecureCookies: false,
+    useSecureCookies: process.env.NODE_ENV === "production",
     cookies: {
       sessionToken: {
         attributes: {
           sameSite: "none",
-          secure:   true,
+          secure:   process.env.NODE_ENV === "production",
           httpOnly: true,
         },
       },

@@ -2,10 +2,6 @@ import { Request, Response } from "express";
 import { getCurrentUser, updateUserProfile } from "./auth.service";
 import { AuthRequest } from "../../middlewares/verifyToken";
 
-// Register & Login → handled by BetterAuth at:
-//   POST /api/auth/sign-up/email
-//   POST /api/auth/sign-in/email
-
 export const getMe = async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthRequest).user?.userId;

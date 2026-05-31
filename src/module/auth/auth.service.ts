@@ -1,9 +1,5 @@
 import { prisma } from "../../lib/prisma";
 
-// Register & Login are now handled by BetterAuth at /api/auth/sign-up/email
-// and /api/auth/sign-in/email. These legacy helpers are kept only for
-// the /api/v1/auth/me and /api/v1/auth/profile routes.
-
 export const updateUserProfile = async (
   userId: string,
   payload: { name?: string; image?: string }
