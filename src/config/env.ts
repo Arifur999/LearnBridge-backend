@@ -12,6 +12,10 @@ export const env = {
   BETTER_AUTH_URL:    process.env.BETTER_AUTH_URL ?? "http://localhost:5000",
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
 
+  // ── Google OAuth ────────────────────────────────────────────
+  GOOGLE_CLIENT_ID:     process.env.GOOGLE_CLIENT_ID ?? "",
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ?? "",
+
   // ── Email / SMTP ────────────────────────────────────────────
   EMAIL_SENDER: {
     SMTP_HOST: process.env.SMTP_HOST ?? "smtp.gmail.com",

@@ -16,7 +16,21 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false, // enable after email is confirmed working
+    requireEmailVerification: false,
+  },
+
+  socialProviders: {
+    google: {
+      enabled:      true,
+      clientId:     env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      mapProfileToUser() {
+        return {
+          role:   Role.STUDENT,
+          status: Status.ACTIVE,
+        };
+      },
+    },
   },
 
   emailVerification: {
