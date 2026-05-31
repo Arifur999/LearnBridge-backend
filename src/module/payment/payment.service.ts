@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Stripe from "stripe";
 import { stripe } from "../../config/stripe.config";
 import { prisma } from "../../lib/prisma";
