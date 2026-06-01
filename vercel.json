@@ -2,6 +2,7 @@
   "version": 2,
   "buildCommand": "npx prisma generate && npx esbuild api/_handler.ts --bundle --packages=external --platform=node --target=node18 --format=esm --outfile=api/index.js",
   "outputDirectory": "public",
+  "framework": null,
   "rewrites": [
     {
       "source": "/(.*)",
