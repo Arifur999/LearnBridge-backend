@@ -103,13 +103,27 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "http://localhost:5000",
     "https://learnbridge-backend.vercel.app",
-    // Add your frontend production URL here if different
+    "https://learnbridge-frontend-five.vercel.app",
   ],
 
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
     cookies: {
       sessionToken: {
+        attributes: {
+          sameSite: "none",
+          secure:   process.env.NODE_ENV === "production",
+          httpOnly: true,
+        },
+      },
+      state: {
+        attributes: {
+          sameSite: "none",
+          secure:   process.env.NODE_ENV === "production",
+          httpOnly: true,
+        },
+      },
+      pkceCodeVerifier: {
         attributes: {
           sameSite: "none",
           secure:   process.env.NODE_ENV === "production",

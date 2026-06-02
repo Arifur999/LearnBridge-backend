@@ -30,19 +30,22 @@ const allowedOrigins = [
   env.FRONTEND_URL,
   "http://localhost:3000",
   "http://localhost:5000",
+  "https://learnbridge-frontend-five.vercel.app",
+  "https://learnbridge-backend.vercel.app",
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow: no origin (server-to-server / curl), "null" (sandboxed/redirect), or known origins
+    if (!origin || origin === "null" || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
     }
   },
   credentials:    true,
-  methods:        ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  methods:        ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
 }));
 
 // BetterAuth must be mounted before express.json()
