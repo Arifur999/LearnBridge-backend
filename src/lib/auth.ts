@@ -102,6 +102,8 @@ export const auth = betterAuth({
     env.FRONTEND_URL,
     "http://localhost:3000",
     "http://localhost:5000",
+    "https://learnbridge-backend.vercel.app",
+    // Add your frontend production URL here if different
   ],
 
   advanced: {
