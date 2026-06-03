@@ -57,6 +57,45 @@ app.use("/api/v1/payments", paymentRoutes);
 app.use(express.json());
 app.use(cookieParser());
 
+// Google OAuth relay — browser navigates here (first-party), we call BetterAuth internally,
+// forward the state/pkce cookies, then redirect to Google. Avoids browser CHIPS partitioning.
+app.get("/api/google-auth", async (req: Request, res: Response) => {
+  const callbackURL = typeof req.query.callbackURL === "string"
+    ? req.query.callbackURL
+    : `${env.FRONTEND_URL}/auth/callback`;
+
+  // Use BETTER_AUTH_URL if it points to the real deployed backend; otherwise derive from request host
+  const base = env.BETTER_AUTH_URL && !env.BETTER_AUTH_URL.includes("localhost")
+    ? env.BETTER_AUTH_URL
+    : `${req.protocol}://${req.get("host")}`;
+
+  try {
+    const upstream = await fetch(`${base}/api/auth/sign-in/social`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "Origin": base },
+      body:    JSON.stringify({ provider: "google", callbackURL }),
+    });
+
+    if (!upstream.ok) {
+      return res.redirect(`${env.FRONTEND_URL}/login?error=google_failed`);
+    }
+
+    // Forward state/pkce cookies — they land as first-party since browser is navigating here
+    const h = upstream.headers as typeof upstream.headers & { getSetCookie?(): string[] };
+    const cookies: string[] = h.getSetCookie?.() ??
+      (upstream.headers.get("set-cookie") ? [upstream.headers.get("set-cookie")!] : []);
+    if (cookies.length) res.setHeader("Set-Cookie", cookies);
+
+    const body = await upstream.json() as { url?: string };
+    if (body.url) return res.redirect(body.url);
+
+    return res.status(502).json({ error: "Google OAuth init failed" });
+  } catch (err) {
+    console.error("Google auth relay error:", err);
+    return res.redirect(`${env.FRONTEND_URL}/login?error=server_error`);
+  }
+});
+
 app.use("/api/v1/auth", authRouter);
 
 app.use("/api/v1/admin", adminRoutes);
