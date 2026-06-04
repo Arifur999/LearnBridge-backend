@@ -2968,10 +2968,11 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
 }));
 app.use("/api/auth", toNodeHandler(auth));
+app.use("/auth", toNodeHandler(auth));
 app.use("/api/v1/payments", payment_route_default);
 app.use(express2.json());
 app.use(cookieParser());
-app.get("/api/google-auth", async (req, res) => {
+var handleGoogleAuth = async (req, res) => {
   const callbackURL = typeof req.query.callbackURL === "string" ? req.query.callbackURL : `${env.FRONTEND_URL}/auth/callback`;
   const base = env.BETTER_AUTH_ORIGIN || `${req.protocol}://${req.get("host")}`;
   try {
@@ -2993,7 +2994,9 @@ app.get("/api/google-auth", async (req, res) => {
     console.error("Google auth relay error:", err);
     return res.redirect(`${env.FRONTEND_URL}/login?error=server_error`);
   }
-});
+};
+app.get("/api/google-auth", handleGoogleAuth);
+app.get("/google-auth", handleGoogleAuth);
 app.use("/api/v1/auth", auth_route_default);
 app.use("/api/v1/admin", admin_route_default);
 app.use("/api/v1/admin", admin_course_route_default);

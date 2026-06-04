@@ -6,6 +6,8 @@ import { Role, Status } from "@prisma/client";
 import { sendEmail } from "../utils/email";
 import { env } from "../config/env";
 
+const isProd = process.env.NODE_ENV === "production";
+
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   secret:  env.BETTER_AUTH_SECRET,
@@ -13,6 +15,15 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+
+  // Store the OAuth state/PKCE inside a single encrypted `oauth_state` cookie
+  // instead of a database `verification` row. On Vercel (serverless) + split
+  // frontend/backend domains the DB-row lookup was failing on the callback
+  // (-> `state_mismatch`). The cookie strategy only needs one cookie to
+  // round-trip, which the /api/google-auth relay already forwards.
+  account: {
+    storeStateStrategy: "cookie",
+  },
 
   emailAndPassword: {
     enabled: true,
@@ -105,29 +116,15 @@ export const auth = betterAuth({
   ],
 
   advanced: {
-    useSecureCookies: process.env.NODE_ENV === "production",
-    cookies: {
-      sessionToken: {
-        attributes: {
-          sameSite: "none",
-          secure:   process.env.NODE_ENV === "production",
-          httpOnly: true,
-        },
-      },
-      state: {
-        attributes: {
-          sameSite: "none",
-          secure:   process.env.NODE_ENV === "production",
-          httpOnly: true,
-        },
-      },
-      pkceCodeVerifier: {
-        attributes: {
-          sameSite: "none",
-          secure:   process.env.NODE_ENV === "production",
-          httpOnly: true,
-        },
-      },
+    useSecureCookies: isProd,
+    // Applies to every auth cookie, including `oauth_state`. In production the
+    // OAuth callback comes from Google (cross-site), so cookies must be
+    // SameSite=None + Secure to survive the redirect. Locally we fall back to
+    // Lax, because browsers reject SameSite=None cookies without Secure on http.
+    defaultCookieAttributes: {
+      sameSite: isProd ? "none" : "lax",
+      secure:   isProd,
+      httpOnly: true,
     },
   },
 });

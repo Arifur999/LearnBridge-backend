@@ -49,6 +49,7 @@ app.use(cors({
 
 // BetterAuth must be mounted before express.json()
 app.use("/api/auth", toNodeHandler(auth));
+app.use("/auth", toNodeHandler(auth));
 
 // Stripe webhook needs raw body — registered before express.json()
 app.use("/api/v1/payments", paymentRoutes);
@@ -56,9 +57,7 @@ app.use("/api/v1/payments", paymentRoutes);
 app.use(express.json());
 app.use(cookieParser());
 
-// Google OAuth relay — browser navigates here (first-party), we call BetterAuth internally,
-// forward the state/pkce cookies, then redirect to Google. Avoids browser CHIPS partitioning.
-app.get("/api/google-auth", async (req: Request, res: Response) => {
+const handleGoogleAuth = async (req: Request, res: Response) => {
   const callbackURL = typeof req.query.callbackURL === "string"
     ? req.query.callbackURL
     : `${env.FRONTEND_URL}/auth/callback`;
@@ -91,7 +90,10 @@ app.get("/api/google-auth", async (req: Request, res: Response) => {
     console.error("Google auth relay error:", err);
     return res.redirect(`${env.FRONTEND_URL}/login?error=server_error`);
   }
-});
+};
+
+app.get("/api/google-auth", handleGoogleAuth);
+app.get("/google-auth", handleGoogleAuth);
 
 app.use("/api/v1/auth", authRouter);
 
