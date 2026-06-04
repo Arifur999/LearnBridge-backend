@@ -1,7 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { toNodeHandler } from "better-auth/node";
+import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
 import { auth } from "./lib/auth";
 import { env } from "./config/env";
 
@@ -58,12 +58,19 @@ app.use(express.json());
 app.use(cookieParser());
 
 const handleGoogleAuth = async (req: Request, res: Response) => {
-  const callbackURL = typeof req.query.callbackURL === "string"
+  // Where the user should ultimately land on the FRONTEND after login.
+  const frontendCallback = typeof req.query.callbackURL === "string"
     ? req.query.callbackURL
     : `${env.FRONTEND_URL}/auth/callback`;
 
   // Use the backend origin to call the auth endpoint at /api/auth
   const base = env.BETTER_AUTH_ORIGIN || `${req.protocol}://${req.get("host")}`;
+
+  // Send Google's redirect back to a BACKEND bridge first. There the session
+  // cookie is first-party, so we can read the token reliably and forward it to
+  // the frontend in the URL — no cross-site / third-party cookie needed.
+  const callbackURL =
+    `${base}/api/auth-bridge?to=${encodeURIComponent(frontendCallback)}`;
 
   try {
     const upstream = await fetch(`${base}/api/auth/sign-in/social`, {
@@ -94,6 +101,37 @@ const handleGoogleAuth = async (req: Request, res: Response) => {
 
 app.get("/api/google-auth", handleGoogleAuth);
 app.get("/google-auth", handleGoogleAuth);
+
+// OAuth bridge: Google redirects here after better-auth sets the session cookie
+// (first-party on the backend domain). We read the session server-side and
+// forward the token to the frontend callback in the query string, so the
+// frontend never depends on a cross-site cookie being readable.
+const handleAuthBridge = async (req: Request, res: Response) => {
+  const to = typeof req.query.to === "string"
+    ? req.query.to
+    : `${env.FRONTEND_URL}/auth/callback`;
+
+  try {
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
+
+    const token = session?.session?.token;
+    if (!token) {
+      return res.redirect(`${env.FRONTEND_URL}/login?error=no_session`);
+    }
+
+    const url = new URL(to);
+    url.searchParams.set("token", token);
+    return res.redirect(url.toString());
+  } catch (err) {
+    console.error("Auth bridge error:", err);
+    return res.redirect(`${env.FRONTEND_URL}/login?error=server_error`);
+  }
+};
+
+app.get("/api/auth-bridge", handleAuthBridge);
+app.get("/auth-bridge", handleAuthBridge);
 
 app.use("/api/v1/auth", authRouter);
 
