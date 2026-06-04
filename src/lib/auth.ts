@@ -16,13 +16,20 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
 
-  // Store the OAuth state/PKCE inside a single encrypted `oauth_state` cookie
-  // instead of a database `verification` row. On Vercel (serverless) + split
-  // frontend/backend domains the DB-row lookup was failing on the callback
-  // (-> `state_mismatch`). The cookie strategy only needs one cookie to
-  // round-trip, which the /api/google-auth relay already forwards.
+  // OAuth state handling.
+  //
+  // The Vercel logs showed the DB `verification` row is found fine, but the
+  // signed `state` cookie never makes it back on the Google callback
+  // (cross-site redirect through the /api/google-auth relay) -> error
+  // `state_security_mismatch` / "State not persisted correctly".
+  //
+  // So we keep the DATABASE as the source of truth for the OAuth state (the
+  // random `state` value IS the CSRF token and is validated against the DB),
+  // and skip the extra state-cookie round-trip check that can't survive the
+  // split frontend/backend domain setup on serverless.
   account: {
-    storeStateStrategy: "cookie",
+    storeStateStrategy: "database",
+    skipStateCookieCheck: true,
   },
 
   emailAndPassword: {
