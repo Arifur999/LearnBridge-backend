@@ -98,12 +98,10 @@ export const auth = betterAuth({
   },
 
   trustedOrigins: [
-    env.BETTER_AUTH_URL,
+    env.BETTER_AUTH_ORIGIN,
     env.FRONTEND_URL,
     "http://localhost:3000",
     "http://localhost:5000",
-    "https://learnbridge-backend.vercel.app",
-    "https://learnbridge-frontend-five.vercel.app",
   ],
 
   advanced: {

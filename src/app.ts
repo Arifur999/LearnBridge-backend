@@ -28,10 +28,9 @@ const app: Application = express();
 
 const allowedOrigins = [
   env.FRONTEND_URL,
+  env.BETTER_AUTH_ORIGIN,
   "http://localhost:3000",
   "http://localhost:5000",
-  "https://learnbridge-frontend-five.vercel.app",
-  "https://learnbridge-backend.vercel.app",
 ].filter(Boolean);
 
 app.use(cors({
@@ -64,10 +63,8 @@ app.get("/api/google-auth", async (req: Request, res: Response) => {
     ? req.query.callbackURL
     : `${env.FRONTEND_URL}/auth/callback`;
 
-  // Use BETTER_AUTH_URL if it points to the real deployed backend; otherwise derive from request host
-  const base = env.BETTER_AUTH_URL && !env.BETTER_AUTH_URL.includes("localhost")
-    ? env.BETTER_AUTH_URL
-    : `${req.protocol}://${req.get("host")}`;
+  // Use the backend origin to call the auth endpoint at /api/auth
+  const base = env.BETTER_AUTH_ORIGIN || `${req.protocol}://${req.get("host")}`;
 
   try {
     const upstream = await fetch(`${base}/api/auth/sign-in/social`, {

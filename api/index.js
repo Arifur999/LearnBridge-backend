@@ -31,13 +31,27 @@ import ejs from "ejs";
 // src/config/env.ts
 import dotenv from "dotenv";
 dotenv.config();
+var normalizeAuthURL = (value) => {
+  try {
+    const url = new URL(value);
+    const pathname = url.pathname.replace(/\/$/, "");
+    if (!pathname.endsWith("/api/auth")) {
+      url.pathname = `${pathname}/api/auth`;
+    }
+    return url.toString();
+  } catch {
+    return value;
+  }
+};
+var betterAuthURL = normalizeAuthURL(process.env.BETTER_AUTH_URL ?? "http://localhost:5000");
 var env = {
   NODE_ENV: process.env.NODE_ENV ?? "development",
   PORT: process.env.PORT ?? "5000",
   DATABASE_URL: process.env.DATABASE_URL ?? "",
   JWT_SECRET: process.env.JWT_SECRET ?? "",
   FRONTEND_URL: process.env.FRONTEND_URL ?? "http://localhost:3000",
-  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? "http://localhost:5000",
+  BETTER_AUTH_URL: betterAuthURL,
+  BETTER_AUTH_ORIGIN: new URL(betterAuthURL).origin,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? "",
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ?? "",
@@ -172,13 +186,29 @@ var auth = betterAuth({
     }
   },
   trustedOrigins: [
-    env.BETTER_AUTH_URL,
-    env.FRONTEND_URL
+    env.BETTER_AUTH_ORIGIN,
+    env.FRONTEND_URL,
+    "http://localhost:3000",
+    "http://localhost:5000"
   ],
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
     cookies: {
       sessionToken: {
+        attributes: {
+          sameSite: "none",
+          secure: process.env.NODE_ENV === "production",
+          httpOnly: true
+        }
+      },
+      state: {
+        attributes: {
+          sameSite: "none",
+          secure: process.env.NODE_ENV === "production",
+          httpOnly: true
+        }
+      },
+      pkceCodeVerifier: {
         attributes: {
           sameSite: "none",
           secure: process.env.NODE_ENV === "production",
@@ -2921,25 +2951,49 @@ var ai_route_default = router17;
 var app = express2();
 var allowedOrigins = [
   env.FRONTEND_URL,
+  env.BETTER_AUTH_ORIGIN,
   "http://localhost:3000",
   "http://localhost:5000"
 ].filter(Boolean);
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || origin === "null" || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
 }));
 app.use("/api/auth", toNodeHandler(auth));
 app.use("/api/v1/payments", payment_route_default);
 app.use(express2.json());
 app.use(cookieParser());
+app.get("/api/google-auth", async (req, res) => {
+  const callbackURL = typeof req.query.callbackURL === "string" ? req.query.callbackURL : `${env.FRONTEND_URL}/auth/callback`;
+  const base = env.BETTER_AUTH_ORIGIN || `${req.protocol}://${req.get("host")}`;
+  try {
+    const upstream = await fetch(`${base}/api/auth/sign-in/social`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Origin": base },
+      body: JSON.stringify({ provider: "google", callbackURL })
+    });
+    if (!upstream.ok) {
+      return res.redirect(`${env.FRONTEND_URL}/login?error=google_failed`);
+    }
+    const h = upstream.headers;
+    const cookies = h.getSetCookie?.() ?? (upstream.headers.get("set-cookie") ? [upstream.headers.get("set-cookie")] : []);
+    if (cookies.length) res.setHeader("Set-Cookie", cookies);
+    const body = await upstream.json();
+    if (body.url) return res.redirect(body.url);
+    return res.status(502).json({ error: "Google OAuth init failed" });
+  } catch (err) {
+    console.error("Google auth relay error:", err);
+    return res.redirect(`${env.FRONTEND_URL}/login?error=server_error`);
+  }
+});
 app.use("/api/v1/auth", auth_route_default);
 app.use("/api/v1/admin", admin_route_default);
 app.use("/api/v1/admin", admin_course_route_default);
