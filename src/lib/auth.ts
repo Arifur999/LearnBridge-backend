@@ -124,6 +124,14 @@ export const auth = betterAuth({
 
   advanced: {
     useSecureCookies: isProd,
+    // Split frontend/backend domains on serverless: every auth request reaches
+    // better-auth through our own trusted server-side relay (Next server
+    // actions / the /api/google-auth + /api/auth-bridge endpoints), which
+    // cannot reliably attach a browser Origin header. better-auth's CSRF check
+    // then rejects them with "Missing or null Origin". CSRF is not a meaningful
+    // threat here because requests are server-to-server from trusted code, so
+    // we disable the origin/CSRF check and keep trustedOrigins for URL checks.
+    disableCSRFCheck: true,
     // Applies to every auth cookie, including `oauth_state`. In production the
     // OAuth callback comes from Google (cross-site), so cookies must be
     // SameSite=None + Secure to survive the redirect. Locally we fall back to
