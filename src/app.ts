@@ -123,6 +123,7 @@ const handleAuthBridge = async (req: Request, res: Response) => {
 
     const url = new URL(to);
     url.searchParams.set("token", token);
+    url.searchParams.set("role", String(session?.user?.role ?? "STUDENT").toLowerCase());
     return res.redirect(url.toString());
   } catch (err) {
     console.error("Auth bridge error:", err);
