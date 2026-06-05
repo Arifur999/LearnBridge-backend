@@ -1,8 +1,9 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application, type Request, type Response } from 'express';
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
 import { auth } from "./lib/auth";
+import { prisma } from "./lib/prisma";
 import { env } from "./config/env";
 
 import authRouter from './module/auth/auth.route';
@@ -66,33 +67,33 @@ const handleGoogleAuth = async (req: Request, res: Response) => {
   const callbackURL = `${base}/api/auth-bridge?to=${encodeURIComponent(frontendCallback)}`;
 
   try {
-    // Call auth API directly — avoids HTTP self-call which is unreliable on serverless
-    const signIn = auth.api.signInSocial as (opts: {
-      body:       { provider: string; callbackURL: string };
-      headers:    Headers;
-      asResponse: true;
-    }) => Promise<Response>;
-
-    const response = await signIn({
-      body:       { provider: "google", callbackURL },
-      headers:    new Headers({ origin: base }),
-      asResponse: true,
+    // Build an in-memory Web API Request and pass it straight to BetterAuth's
+    // handler — identical to what toNodeHandler() does but without a real HTTP
+    // round-trip, which is unreliable on Vercel serverless.
+    const internalReq = new Request(`${base}/api/auth/sign-in/social`, {
+      method:  "POST",
+      headers: { "content-type": "application/json", "origin": base },
+      body:    JSON.stringify({ provider: "google", callbackURL }),
     });
 
-    // Forward any state/PKCE cookies set during OAuth init
+    const response = await (auth as unknown as {
+      handler: (r: globalThis.Request) => Promise<globalThis.Response>;
+    }).handler(internalReq);
+
+    // Forward any OAuth-state cookies BetterAuth set
     const h = response.headers as typeof response.headers & { getSetCookie?(): string[] };
     const cookies: string[] = h.getSetCookie?.() ??
       (response.headers.get("set-cookie") ? [response.headers.get("set-cookie")!] : []);
     if (cookies.length) res.setHeader("Set-Cookie", cookies);
 
-    // BetterAuth may return 302 (Location header) or 200 (url in JSON body)
+    // BetterAuth returns either 302 (Location) or 200 { url }
     const location = response.headers.get("location");
     if (location) return res.redirect(location);
 
     const body = await response.json().catch(() => ({})) as { url?: string };
     if (body.url) return res.redirect(body.url);
 
-    console.error("Google OAuth init: unexpected response status", response.status);
+    console.error("Google OAuth init: unexpected status", response.status);
     return res.redirect(`${env.FRONTEND_URL}/login?error=google_init_failed`);
   } catch (err) {
     console.error("Google auth error:", err);
@@ -113,18 +114,47 @@ const handleAuthBridge = async (req: Request, res: Response) => {
     : `${env.FRONTEND_URL}/auth/callback`;
 
   try {
+    let token: string | undefined;
+    let role = "student";
+
+    // Primary: ask BetterAuth to resolve the session from request cookies
     const session = await auth.api.getSession({
       headers: fromNodeHeaders(req.headers),
-    });
+    }).catch(() => null);
 
-    const token = session?.session?.token;
+    if (session?.session?.token) {
+      token = session.session.token;
+      role  = String(session.user?.role ?? "STUDENT").toLowerCase();
+    } else {
+      // Fallback: read the raw session-token cookie and verify it against the DB.
+      // Handles both plain and __Secure- prefixed cookie names.
+      const cookieHeader = req.headers.cookie ?? "";
+      const match = cookieHeader.match(
+        /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=([^;]+)/
+      );
+      const rawToken = match?.[1] ? decodeURIComponent(match[1]) : null;
+
+      if (rawToken) {
+        const dbSession = await prisma.session.findUnique({
+          where:   { token: rawToken },
+          include: { user: true },
+        }).catch(() => null);
+
+        if (dbSession && dbSession.expiresAt > new Date()) {
+          token = rawToken;
+          role  = String(dbSession.user?.role ?? "STUDENT").toLowerCase();
+        }
+      }
+    }
+
     if (!token) {
+      console.error("Auth bridge: no valid session. cookie:", req.headers.cookie?.slice(0, 120));
       return res.redirect(`${env.FRONTEND_URL}/login?error=no_session`);
     }
 
     const url = new URL(to);
     url.searchParams.set("token", token);
-    url.searchParams.set("role", String(session?.user?.role ?? "STUDENT").toLowerCase());
+    url.searchParams.set("role", role);
     return res.redirect(url.toString());
   } catch (err) {
     console.error("Auth bridge error:", err);
