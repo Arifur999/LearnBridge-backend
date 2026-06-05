@@ -58,43 +58,44 @@ app.use(express.json());
 app.use(cookieParser());
 
 const handleGoogleAuth = async (req: Request, res: Response) => {
-  // Where the user should ultimately land on the FRONTEND after login.
   const frontendCallback = typeof req.query.callbackURL === "string"
     ? req.query.callbackURL
     : `${env.FRONTEND_URL}/auth/callback`;
 
-  // Use the backend origin to call the auth endpoint at /api/auth
-  const base = env.BETTER_AUTH_ORIGIN || `${req.protocol}://${req.get("host")}`;
-
-  // Send Google's redirect back to a BACKEND bridge first. There the session
-  // cookie is first-party, so we can read the token reliably and forward it to
-  // the frontend in the URL — no cross-site / third-party cookie needed.
-  const callbackURL =
-    `${base}/api/auth-bridge?to=${encodeURIComponent(frontendCallback)}`;
+  const base = env.BETTER_AUTH_ORIGIN;
+  const callbackURL = `${base}/api/auth-bridge?to=${encodeURIComponent(frontendCallback)}`;
 
   try {
-    const upstream = await fetch(`${base}/api/auth/sign-in/social`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json", "Origin": base },
-      body:    JSON.stringify({ provider: "google", callbackURL }),
+    // Call auth API directly — avoids HTTP self-call which is unreliable on serverless
+    const signIn = auth.api.signInSocial as (opts: {
+      body:       { provider: string; callbackURL: string };
+      headers:    Headers;
+      asResponse: true;
+    }) => Promise<Response>;
+
+    const response = await signIn({
+      body:       { provider: "google", callbackURL },
+      headers:    new Headers({ origin: base }),
+      asResponse: true,
     });
 
-    if (!upstream.ok) {
-      return res.redirect(`${env.FRONTEND_URL}/login?error=google_failed`);
-    }
-
-    // Forward state/pkce cookies — they land as first-party since browser is navigating here
-    const h = upstream.headers as typeof upstream.headers & { getSetCookie?(): string[] };
+    // Forward any state/PKCE cookies set during OAuth init
+    const h = response.headers as typeof response.headers & { getSetCookie?(): string[] };
     const cookies: string[] = h.getSetCookie?.() ??
-      (upstream.headers.get("set-cookie") ? [upstream.headers.get("set-cookie")!] : []);
+      (response.headers.get("set-cookie") ? [response.headers.get("set-cookie")!] : []);
     if (cookies.length) res.setHeader("Set-Cookie", cookies);
 
-    const body = await upstream.json() as { url?: string };
+    // BetterAuth may return 302 (Location header) or 200 (url in JSON body)
+    const location = response.headers.get("location");
+    if (location) return res.redirect(location);
+
+    const body = await response.json().catch(() => ({})) as { url?: string };
     if (body.url) return res.redirect(body.url);
 
-    return res.status(502).json({ error: "Google OAuth init failed" });
+    console.error("Google OAuth init: unexpected response status", response.status);
+    return res.redirect(`${env.FRONTEND_URL}/login?error=google_init_failed`);
   } catch (err) {
-    console.error("Google auth relay error:", err);
+    console.error("Google auth error:", err);
     return res.redirect(`${env.FRONTEND_URL}/login?error=server_error`);
   }
 };
