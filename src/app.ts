@@ -113,6 +113,13 @@ const handleAuthBridge = async (req: Request, res: Response) => {
     ? req.query.to
     : `${env.FRONTEND_URL}/auth/callback`;
 
+  // If BetterAuth forwarded an OAuth error, surface it directly
+  if (typeof req.query.error === "string") {
+    console.error("OAuth callback error forwarded to bridge:", req.query.error, req.query.error_description);
+    const errCode = encodeURIComponent(req.query.error as string);
+    return res.redirect(`${env.FRONTEND_URL}/login?error=${errCode}`);
+  }
+
   try {
     let token: string | undefined;
     let role = "student";
